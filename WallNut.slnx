@@ -3,11 +3,13 @@
     <Project Path="src/WallNut.App/WallNut.App.csproj" />
     <Project Path="src/WallNut.Nut/WallNut.Nut.csproj" />
     <Project Path="src/WallNut.Service/WallNut.Service.csproj" />
+    <Project Path="src/WallNut.Shared/WallNut.Shared.csproj" />
     <Project Path="src/WallNut.Simulator/WallNut.Simulator.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/WallNut.Nut.Tests/WallNut.Nut.Tests.csproj" />
     <Project Path="tests/WallNut.Service.Tests/WallNut.Service.Tests.csproj" />
+    <Project Path="tests/WallNut.Shared.Tests/WallNut.Shared.Tests.csproj" />
     <Project Path="tests/WallNut.Simulator.Tests/WallNut.Simulator.Tests.csproj" />
   </Folder>
 </Solution>

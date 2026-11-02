@@ -47,6 +47,9 @@ public enum UpsEventKind
     ShutdownRearmed,
     /// <summary>The shutdown command failed. WALLNut keeps retrying.</summary>
     ShutdownFailed,
+
+    /// <summary>A test notification someone asked for (settings screen "Send test").</summary>
+    Test,
 }
 
 /// <summary>Something that happened to one UPS endpoint.</summary>

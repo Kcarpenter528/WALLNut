@@ -22,7 +22,8 @@ WALLNut is a cross-platform (Windows, macOS, Linux) monitor for UPS devices serv
 |---|---|
 | `src/WallNut.Nut` | NUT network protocol client |
 | `src/WallNut.Service` | Background service (monitoring, shutdown, alerts, history) |
-| `src/WallNut.App` | Avalonia desktop app |
+| `src/WallNut.App` | Avalonia tray app: desktop notifications and settings (dashboard later) |
+| `src/WallNut.Shared` | Messages and client shared by the service and apps; notification rules |
 | `src/WallNut.Simulator` | Fake NUT server with simulated UPS devices (`wallnut-sim`) |
 | `tests/` | Tests for each project |
 | `tools/nut-watch.ps1` | Diagnostic script: holds a connection open and logs every drop |
@@ -51,6 +52,22 @@ whatever is in `appsettings.json`:
 ```bash
 dotnet run --project src/WallNut.Service
 ```
+
+## Desktop notifications (tray app)
+
+Background services can't show desktop notifications on Windows, macOS or Linux, so each
+logged-in user runs the small WALLNut tray app. It connects to the service over a local-only
+channel (named pipe `\\.\pipe\WallNut.Service` on Windows, a Unix socket elsewhere) and shows
+native notifications: Windows toasts, macOS Notification Center, or `notify-send` on Linux.
+
+```bash
+dotnet run --project src/WallNut.App -- --settings
+```
+
+The tray icon's dot shows overall health (none = fine, amber = needs attention, red = critical,
+grey = service not running). Click it for notification settings: a master switch, a delay that
+hides short power blips, per-group and per-event switches, and per-UPS muting. Settings are
+saved per user. Shutdown warnings can't be turned off.
 
 ## Configuring UPS endpoints
 

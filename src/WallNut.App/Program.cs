@@ -1,18 +1,20 @@
 ﻿using Avalonia;
-using System;
 
 namespace WallNut.App;
 
-class Program
+internal static class Program
 {
-    // Initialization code. Don't use any Avalonia, third-party APIs or any
-    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-    // yet and stuff might break.
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static int Main(string[] args)
+    {
+        // One tray app per logged-in user.
+        using var single = new Mutex(initiallyOwned: true, @"Local\WALLNut.Tray", out var first);
+        if (!first) return 0;
 
-    // Avalonia configuration, don't remove; also used by visual designer.
+        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    // Avalonia configuration, also used by the visual designer.
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()

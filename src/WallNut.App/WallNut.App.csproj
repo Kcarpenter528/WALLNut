@@ -1,10 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The WALLNut tray app: lives in the notification area, shows desktop notifications,
+       and (later) opens the dashboard. One copy runs per logged-in user. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
+    <!-- On Windows, target the Windows SDK so we can show native toast notifications. -->
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net10.0</TargetFramework>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::IsOSPlatform('Windows'))">10.0.17763.0</SupportedOSPlatformVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\wallnut.ico</ApplicationIcon>
+    <AssemblyName>WALLNut</AssemblyName>
+    <RootNamespace>WallNut.App</RootNamespace>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.5" />
@@ -15,5 +27,9 @@
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WallNut.Shared\WallNut.Shared.csproj" />
   </ItemGroup>
 </Project>

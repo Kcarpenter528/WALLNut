@@ -25,14 +25,13 @@ public sealed class LocalApiTests : IAsyncLifetime
         [
             "--environment", "Testing",
             $"--WallNut:Api:Endpoint={_endpoint}",
-            "--WallNut:Endpoints:nas:Enabled=false", // never touch a real NAS from tests
             "--WallNut:Endpoints:sim:Host=127.0.0.1",
             $"--WallNut:Endpoints:sim:Port={_sim.Port}",
             "--WallNut:Endpoints:sim:Ups=ups",
             "--WallNut:Endpoints:sim:DisplayName=Test UPS",
             "--WallNut:Endpoints:sim:PollIntervalSeconds=0.1",
             "--Logging:LogLevel:Default=Warning",
-        ]);
+        ], machineConfigFile: "none"); // never read this PC's real settings
         await _app.StartAsync();
     }
 

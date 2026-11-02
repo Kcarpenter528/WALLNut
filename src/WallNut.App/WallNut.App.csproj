@@ -32,4 +32,12 @@
   <ItemGroup>
     <ProjectReference Include="..\WallNut.Shared\WallNut.Shared.csproj" />
   </ItemGroup>
+
+  <!-- SkiaSharp/HarfBuzz packages ship ~100 MB of native debug symbols; installs don't need them. -->
+  <Target Name="RemoveNativeSymbolsFromPublish" AfterTargets="Publish" Condition="'$(DebugType)' == 'none'">
+    <ItemGroup>
+      <_WallNutPublishedPdbs Include="$(PublishDir)*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(_WallNutPublishedPdbs)" />
+  </Target>
 </Project>

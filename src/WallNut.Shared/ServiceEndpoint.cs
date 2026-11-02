@@ -18,8 +18,11 @@ public static class ServiceEndpoint
             var overridden = Environment.GetEnvironmentVariable(OverrideVariable);
             if (!string.IsNullOrWhiteSpace(overridden)) return overridden;
             if (OperatingSystem.IsWindows()) return DefaultPipeName;
-            // A system service (root) uses the shared run directory; a developer run uses a per-user path.
-            if (Environment.UserName == "root") return OperatingSystem.IsMacOS() ? "/var/run/wallnut.sock" : "/run/wallnut/wallnut.sock";
+
+            // The installed service (root) listens on a system-wide socket that the tray app (a normal
+            // user) must find too. Without an installed service, a developer run uses a per-user path.
+            var system = OperatingSystem.IsMacOS() ? "/var/run/wallnut/wallnut.sock" : "/run/wallnut/wallnut.sock";
+            if (Environment.UserName == "root" || File.Exists(system)) return system;
             var runtimeDir = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
             return Path.Combine(string.IsNullOrEmpty(runtimeDir) ? Path.GetTempPath() : runtimeDir, "wallnut.sock");
         }

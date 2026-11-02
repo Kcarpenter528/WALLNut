@@ -1,0 +1,45 @@
+{
+  // WALLNut machine settings. The installer copies this to:
+  //   Windows: C:\ProgramData\WALLNut\config.json
+  //   Linux:   /etc/wallnut/config.json
+  //   macOS:   /Library/Application Support/WALLNut/config.json
+  // Only administrators can read or change it (it may hold passwords).
+  // After editing, restart the WALLNut service. Check your settings with: WallNut.Service --check
+  "WallNut": {
+    // One entry per UPS; each gets its own connection. The key ("nas") is its id.
+    "Endpoints": {
+      "nas": {
+        "DisplayName": "Synology NAS",
+        // An IP address or a DNS name (e.g. "diskstation.local"). Names are looked up on every reconnect.
+        "Host": "192.168.1.10",
+        "Port": 3493,
+        // The UPS name on that server. Synology and QNAP use "ups".
+        "Ups": "ups",
+        // Synology's built-in NUT account. Needed when Role is PowersThisMachine.
+        "Username": "monuser",
+        "Password": "secret",
+        // "Monitor": watch and alert only.
+        // "PowersThisMachine": this computer is plugged into it, so it can trigger a shutdown here.
+        "Role": "PowersThisMachine",
+        "PowerValue": 1,
+        "PollIntervalSeconds": 5,
+        "TimeoutSeconds": 10
+      }
+      // , "office": { "Host": "10.0.0.20", "Ups": "ups", "Role": "Monitor" }
+    },
+    "Shutdown": {
+      // Keep test mode on until you've rehearsed an outage and are happy with what you see.
+      // In test mode WALLNut logs "would shut down now" instead of doing it.
+      "DryRun": true,
+      "Action": "Shutdown",              // or "Hibernate"
+      "MinimumSupplies": 1,
+      "RespectForcedShutdown": true,     // shut down when the NAS says so
+      "OnLowBattery": true,              // shut down when the UPS reports low battery
+      "BatteryChargeBelowPercent": null, // e.g. 30 to leave earlier than the UPS's own low point
+      "RuntimeBelowSeconds": null,       // e.g. 300
+      "OnBatteryForSeconds": null,       // e.g. 600 to leave after 10 minutes on battery
+      "LostWhileOnBatterySeconds": 15,   // fail-safe
+      "FinalDelaySeconds": 5
+    }
+  }
+}

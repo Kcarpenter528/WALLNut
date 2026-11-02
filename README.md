@@ -28,6 +28,23 @@ WALLNut is a cross-platform (Windows, macOS, Linux) monitor for UPS devices serv
 | `tests/` | Tests for each project |
 | `tools/nut-watch.ps1` | Diagnostic script: holds a connection open and logs every drop |
 
+## Install
+
+The installers build self-contained copies (the target machine doesn't need .NET), install the
+service to start at boot and restart if it crashes, run a settings check, and start the tray app
+at login for every user. Running them again upgrades in place and keeps your settings.
+
+| OS | Install | Settings | Logs |
+|---|---|---|---|
+| Windows | `packaging\windows\install.ps1 -NasHost 192.168.1.10` (admin PowerShell) | `C:\ProgramData\WALLNut\config.json` | Event Viewer > Application, source `WALLNut` |
+| Linux (systemd) | `sudo packaging/linux/install.sh --nas-host 192.168.1.10` | `/etc/wallnut/config.json` | `journalctl -u wallnut -f` |
+| macOS | `sudo packaging/macos/install.sh --nas-host 192.168.1.10` | `/Library/Application Support/WALLNut/config.json` | `/Library/Logs/WALLNut/service.log` |
+
+Settings files are readable by administrators only (they can hold passwords). See
+[packaging/config.example.json](packaging/config.example.json) for every option, and check them any
+time with `WallNut.Service --check`. Shutdown starts in **test mode**; turn it off with
+`"DryRun": false` once you've rehearsed an outage.
+
 ## Try it with the simulator
 
 ```bash

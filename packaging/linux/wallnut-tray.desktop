@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=WALLNut
+Comment=UPS alerts and status
+Exec=/opt/wallnut/tray/WALLNut
+Icon=/opt/wallnut/tray/wallnut.png
+Terminal=false
+Categories=System;Monitor;
+X-GNOME-Autostart-enabled=true

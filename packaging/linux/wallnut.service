@@ -1,0 +1,22 @@
+[Unit]
+Description=WALLNut UPS monitor
+Documentation=https://networkupstools.org/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+# AddSystemd() reports readiness, so systemd knows when it's really up.
+Type=notify
+ExecStart=/opt/wallnut/service/WallNut.Service
+WorkingDirectory=/opt/wallnut/service
+Environment=DOTNET_ENVIRONMENT=Production
+# /run/wallnut holds the socket the tray app connects to; users need to reach it.
+RuntimeDirectory=wallnut
+RuntimeDirectoryMode=0755
+Restart=always
+RestartSec=5
+# Runs as root: it needs to power the machine off.
+User=root
+
+[Install]
+WantedBy=multi-user.target

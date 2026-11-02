@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- WALLNut service: runs as root at boot (it needs to shut the Mac down), restarts if it stops. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>wallnut.service</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/wallnut/service/WallNut.Service</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/usr/local/wallnut/service</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>DOTNET_ENVIRONMENT</key>
+        <string>Production</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Library/Logs/WALLNut/service.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Library/Logs/WALLNut/service.log</string>
+</dict>
+</plist>

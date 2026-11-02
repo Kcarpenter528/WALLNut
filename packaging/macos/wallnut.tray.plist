@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- WALLNut tray app: starts for each user at login (a LaunchAgent), in that user's session. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>wallnut.tray</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/wallnut/tray/WALLNut</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+</dict>
+</plist>

@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WallNut.App/WallNut.App.csproj" />
+    <Project Path="src/WallNut.Nut/WallNut.Nut.csproj" />
+    <Project Path="src/WallNut.Service/WallNut.Service.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WallNut.Nut.Tests/WallNut.Nut.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -13,6 +13,7 @@ public sealed record UpsState
     public required int Port { get; init; }
     public required string Ups { get; init; }
     public required UpsRole Role { get; init; }
+    public int PowerValue { get; init; } = 1;
 
     public bool Connected { get; init; }
     public bool Stale { get; init; }
@@ -22,6 +23,15 @@ public sealed record UpsState
 
     /// <summary>Last status read. Kept while disconnected, so the shutdown logic knows what it was.</summary>
     public UpsStatus? Status { get; init; }
+
+    /// <summary>When the UPS went on battery (null while on line power). Kept while disconnected.</summary>
+    public DateTimeOffset? OnBatterySince { get; init; }
+
+    /// <summary>When contact was lost (null while connected or before the first attempt fails).</summary>
+    public DateTimeOffset? DisconnectedSince { get; init; }
+
+    /// <summary>When the driver started reporting stale data (null when data is fresh).</summary>
+    public DateTimeOffset? StaleSince { get; init; }
 
     /// <summary>All variables from the last successful read.</summary>
     public IReadOnlyDictionary<string, string> Vars { get; init; } = new Dictionary<string, string>();

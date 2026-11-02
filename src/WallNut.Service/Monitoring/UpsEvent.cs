@@ -40,6 +40,13 @@ public enum UpsEventKind
     NotCalibrating,
     Alarm,
     AlarmCleared,
+
+    /// <summary>SHUTDOWN: this machine is shutting down (or would, in test mode). Not tied to one UPS.</summary>
+    ShutdownInitiated,
+    /// <summary>Test mode only: the condition cleared, so the next one will be reported again.</summary>
+    ShutdownRearmed,
+    /// <summary>The shutdown command failed. WALLNut keeps retrying.</summary>
+    ShutdownFailed,
 }
 
 /// <summary>Something that happened to one UPS endpoint.</summary>
@@ -55,5 +62,8 @@ public sealed record UpsEvent(
     public bool IsProblem => Kind is UpsEventKind.CommunicationLost or UpsEventKind.DataStale
         or UpsEventKind.OnBattery or UpsEventKind.LowBattery or UpsEventKind.ForcedShutdown
         or UpsEventKind.ReplaceBattery or UpsEventKind.Overload or UpsEventKind.Off
-        or UpsEventKind.Bypass or UpsEventKind.Alarm;
+        or UpsEventKind.Bypass or UpsEventKind.Alarm or UpsEventKind.ShutdownInitiated or UpsEventKind.ShutdownFailed;
+
+    /// <summary>The endpoint id used for events about this machine rather than one UPS.</summary>
+    public const string ThisMachine = "this-machine";
 }

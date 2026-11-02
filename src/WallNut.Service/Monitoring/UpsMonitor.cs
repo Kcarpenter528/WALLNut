@@ -38,7 +38,7 @@ public sealed class UpsMonitor
         _store.Set(new UpsState
         {
             EndpointId = id, DisplayName = DisplayName, Host = endpoint.Host, Port = endpoint.Port,
-            Ups = endpoint.Ups, Role = endpoint.Role,
+            Ups = endpoint.Ups, Role = endpoint.Role, PowerValue = endpoint.PowerValue,
         });
     }
 
@@ -66,7 +66,7 @@ public sealed class UpsMonitor
                 var vars = await ReadAsync(client, ct);
                 backoff.Reset();
                 var now = _time.GetUtcNow();
-                _store.Set(State with { Connected = true, ConnectedSince = now, LastError = null });
+                _store.Set(State with { Connected = true, ConnectedSince = now, DisconnectedSince = null, LastError = null });
                 await PublishAsync(everConnected ? UpsEventKind.CommunicationRestored : UpsEventKind.Connected,
                     everConnected ? $"Contact with {Where} is back." : $"Connected to {Where}.", State.Status, ct);
                 everConnected = true;
@@ -79,7 +79,13 @@ public sealed class UpsMonitor
             catch (Exception e)
             {
                 var why = Explain(e);
-                _store.Set(State with { Connected = false, ConnectedSince = null, LastError = why });
+                _store.Set(State with
+                {
+                    Connected = false,
+                    ConnectedSince = null,
+                    DisconnectedSince = State.DisconnectedSince ?? _time.GetUtcNow(),
+                    LastError = why,
+                });
                 if (!lostReported)
                 {
                     var wasOnBattery = State.Status?.IsOnBattery == true ? " The UPS was last seen ON BATTERY." : "";
@@ -120,7 +126,7 @@ public sealed class UpsMonitor
                 var vars = await ReadAsync(client, ct);
                 if (State.Stale)
                 {
-                    _store.Set(State with { Stale = false });
+                    _store.Set(State with { Stale = false, StaleSince = null });
                     await PublishAsync(UpsEventKind.DataRestored, $"{Where} is reporting data again.", State.Status, ct);
                 }
                 await ApplyAsync(vars, ct);
@@ -130,7 +136,7 @@ public sealed class UpsMonitor
                 // The server is fine but has lost the UPS itself. Keep the connection and keep asking.
                 if (!State.Stale)
                 {
-                    _store.Set(State with { Stale = true, LastError = Explain(e) });
+                    _store.Set(State with { Stale = true, StaleSince = _time.GetUtcNow(), LastError = Explain(e) });
                     await PublishAsync(UpsEventKind.DataStale, $"{Where}: {Explain(e)}", State.Status, ct);
                 }
             }
@@ -144,7 +150,14 @@ public sealed class UpsMonitor
     {
         var previous = State.Status;
         var status = UpsStatus.Parse(vars.GetValueOrDefault("ups.status"));
-        _store.Set(State with { Vars = vars, Status = status, LastUpdate = _time.GetUtcNow() });
+        var now = _time.GetUtcNow();
+        _store.Set(State with
+        {
+            Vars = vars,
+            Status = status,
+            LastUpdate = now,
+            OnBatterySince = status.IsOnBattery ? State.OnBatterySince ?? now : null,
+        });
 
         foreach (var kind in EventDetector.Detect(previous, status))
             await PublishAsync(kind, Describe(kind, vars), status, ct);

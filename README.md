@@ -58,6 +58,22 @@ Edit `src/WallNut.Service/appsettings.json`. Each entry under `WallNut:Endpoints
 its own connection. `Host` can be an IP address or a DNS name; names are looked up again on every
 reconnect, so a NAS whose address changes is followed automatically.
 
+## Shutdown
+
+Only UPSes with `"Role": "PowersThisMachine"` can shut this machine down. Like NUT's `upsmon`, each
+counts as a power supply (`PowerValue`, usually 1), and the machine shuts down when fewer than
+`Shutdown:MinimumSupplies` are healthy. A UPS is critical when:
+
+- the NUT server sets forced shutdown (FSD), e.g. a Synology about to power off
+- it is on battery and reports low battery
+- it is on battery and below `BatteryChargeBelowPercent` or `RuntimeBelowSeconds` (optional)
+- it has been on battery for `OnBatteryForSeconds` (optional)
+- contact was lost, or its data went stale, for `LostWhileOnBatterySeconds` while it was on battery
+
+**`Shutdown:DryRun` is `true` by default**: WALLNut logs "would shut down now" with the exact command
+instead of running it. Rehearse with the simulator (`outage office`, then `charge office 5`) before
+setting it to `false`.
+
 ## Build and test
 
 Requires the .NET 10 SDK.

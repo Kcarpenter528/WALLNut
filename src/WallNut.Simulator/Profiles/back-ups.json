@@ -1,0 +1,74 @@
+// A small consumer UPS, modeled on what NUT's usbhid-ups driver reports for an APC Back-UPS
+// (the kind usually plugged into a Synology or QNAP NAS). Deliberately sparse: real devices
+// like this only expose a few dozen variables, and clients must cope with what's missing.
+{
+  "description": "Back-UPS ES 600M1 (simulated)",
+  "simulation": {
+    "runtimeAtFullLoadSec": 150,
+    "rechargeSec": 28800,
+    "loadPercent": 15,
+    "powerFactor": 0.6,
+    "phases": 1
+  },
+  "vars": {
+    "battery.charge": "100",
+    "battery.charge.low": "10",
+    "battery.charge.warning": "50",
+    "battery.date": "2001/09/25",
+    "battery.mfr.date": "2023/05/02",
+    "battery.runtime": "2280",
+    "battery.runtime.low": "120",
+    "battery.type": "PbAc",
+    "battery.voltage": "13.5",
+    "battery.voltage.nominal": "12.0",
+    "device.mfr": "American Power Conversion",
+    "device.model": "Back-UPS ES 600M1",
+    "device.serial": "5B2318T47115",
+    "device.type": "ups",
+    "driver.name": "usbhid-ups",
+    "driver.parameter.pollfreq": "30",
+    "driver.parameter.pollinterval": "5",
+    "driver.parameter.port": "auto",
+    "driver.parameter.synchronous": "auto",
+    "driver.version": "2.8.2",
+    "driver.version.data": "APC HID 0.98",
+    "driver.version.internal": "0.52",
+    "input.sensitivity": "medium",
+    "input.transfer.high": "139",
+    "input.transfer.low": "88",
+    "input.transfer.reason": "input voltage out of range",
+    "input.voltage": "121.0",
+    "input.voltage.nominal": "120",
+    "ups.beeper.status": "enabled",
+    "ups.delay.shutdown": "20",
+    "ups.firmware": "928.a8 .D",
+    "ups.firmware.aux": "a8",
+    "ups.load": "15",
+    "ups.mfr": "American Power Conversion",
+    "ups.mfr.date": "2023/05/02",
+    "ups.model": "Back-UPS ES 600M1",
+    "ups.productid": "0002",
+    "ups.realpower.nominal": "330",
+    "ups.serial": "5B2318T47115",
+    "ups.status": "OL",
+    "ups.test.result": "No test initiated",
+    "ups.timer.reboot": "0",
+    "ups.timer.shutdown": "-1",
+    "ups.vendorid": "051d"
+  },
+  "rw": {
+    "battery.charge.low": { "type": "RANGE", "ranges": [[5, 90]] },
+    "battery.runtime.low": { "type": "RANGE", "ranges": [[60, 600]] },
+    "input.sensitivity": { "type": "ENUM", "values": ["low", "medium", "high"] },
+    "input.transfer.high": { "type": "ENUM", "values": ["136", "139", "142", "145"] },
+    "input.transfer.low": { "type": "ENUM", "values": ["78", "84", "88", "92"] },
+    "ups.delay.shutdown": { "type": "RANGE", "ranges": [[0, 600]] }
+  },
+  "commands": [
+    "beeper.disable", "beeper.enable", "beeper.mute", "beeper.off", "beeper.on",
+    "load.off", "load.off.delay",
+    "shutdown.reboot", "shutdown.stop",
+    "test.battery.start.deep", "test.battery.start.quick", "test.battery.stop",
+    "test.panel.start", "test.panel.stop"
+  ]
+}

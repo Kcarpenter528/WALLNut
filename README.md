@@ -23,8 +23,40 @@ WALLNut is a cross-platform (Windows, macOS, Linux) monitor for UPS devices serv
 | `src/WallNut.Nut` | NUT network protocol client |
 | `src/WallNut.Service` | Background service (monitoring, shutdown, alerts, history) |
 | `src/WallNut.App` | Avalonia desktop app |
-| `tests/WallNut.Nut.Tests` | Tests for the protocol client |
+| `src/WallNut.Simulator` | Fake NUT server with simulated UPS devices (`wallnut-sim`) |
+| `tests/` | Tests for each project |
 | `tools/nut-watch.ps1` | Diagnostic script: holds a connection open and logs every drop |
+
+## Try it with the simulator
+
+```bash
+dotnet run --project src/WallNut.Simulator
+```
+
+This starts a NUT server on `127.0.0.1:3493` with three UPSes:
+
+| Name | Profile | What it is |
+|---|---|---|
+| `rack` | `full-featured` | Reports every variable and command in the NUT spec (375 variables, 95 commands) |
+| `office` | `back-ups` | A small APC Back-UPS, like the ones usually plugged into a NAS |
+| `dc` | `three-phase` | A 30 kVA three-phase UPS with per-phase readings |
+
+At the `sim>` prompt, type `outage rack`, `restore rack`, `charge rack 15`, `rb office on`, `drop`,
+`deny on`, `speed 60` and so on (`help` lists everything). Users: `admin`/`admin` (can change
+settings and run commands) and `monuser`/`secret` (Synology's monitoring account).
+
+In another terminal, run the service. In Development it watches the three simulated UPSes plus
+whatever is in `appsettings.json`:
+
+```bash
+dotnet run --project src/WallNut.Service
+```
+
+## Configuring UPS endpoints
+
+Edit `src/WallNut.Service/appsettings.json`. Each entry under `WallNut:Endpoints` is one UPS with
+its own connection. `Host` can be an IP address or a DNS name; names are looked up again on every
+reconnect, so a NAS whose address changes is followed automatically.
 
 ## Build and test
 

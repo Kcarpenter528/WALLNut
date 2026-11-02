@@ -4,7 +4,33 @@
              Name="WALLNut"
              RequestedThemeVariant="Default">
     <!-- "Default" follows the system light/dark setting. -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="CardStrokeBrush" Color="#E3E3E3" />
+                    <SolidColorBrush x:Key="WindowBrush" Color="#F4F4F5" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="CardBrush" Color="#202020" />
+                    <SolidColorBrush x:Key="CardStrokeBrush" Color="#333336" />
+                    <SolidColorBrush x:Key="WindowBrush" Color="#161618" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
     <Application.Styles>
         <FluentTheme />
+        <!-- Cards used across WALLNut's windows. -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        <Style Selector="Window">
+            <Setter Property="Background" Value="{DynamicResource WindowBrush}" />
+        </Style>
     </Application.Styles>
 </Application>

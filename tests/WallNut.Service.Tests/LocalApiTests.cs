@@ -31,6 +31,7 @@ public sealed class LocalApiTests : IAsyncLifetime
             "--WallNut:Endpoints:sim:DisplayName=Test UPS",
             "--WallNut:Endpoints:sim:PollIntervalSeconds=0.1",
             "--Logging:LogLevel:Default=Warning",
+            "--WallNut:History:Enabled=false",
         ], machineConfigFile: "none"); // never read this PC's real settings
         await _app.StartAsync();
     }

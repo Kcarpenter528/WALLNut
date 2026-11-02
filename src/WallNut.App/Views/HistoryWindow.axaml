@@ -1,0 +1,94 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="WallNut.App.Views.HistoryWindow"
+        Title="WALLNut - History"
+        Icon="/Assets/wallnut.ico"
+        Width="1180" Height="900" MinWidth="720" MinHeight="520"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Styles>
+        <Style Selector="Border.card">
+            <Setter Property="Padding" Value="14,10" />
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="TextBlock.value">
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,18,0,8" />
+        </Style>
+        <Style Selector="Button.range">
+            <Setter Property="MinWidth" Value="48" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel>
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top" Padding="20,14,20,10">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Image Source="/Assets/wallnut.png" Width="34" Height="34" />
+                    <TextBlock Text="History" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <ComboBox Name="UpsBox" MinWidth="240" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <StackPanel Name="RangeButtons" Orientation="Horizontal" Spacing="4" />
+                    <Button Name="RefreshButton" Content="Refresh" Margin="10,0,0,0" />
+                    <Button Name="ExportButton" Content="Export CSV" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Status line -->
+        <TextBlock DockPanel.Dock="Bottom" Name="StatusText" Margin="20,6,20,10" FontSize="12" Opacity="0.7" />
+
+        <ScrollViewer Padding="20,0,20,16">
+            <StackPanel>
+                <!-- Summary cards -->
+                <UniformGrid Columns="5" Margin="0,0,0,12">
+                    <Border Classes="card" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Classes="label" Text="Power outages" /><TextBlock Name="OutagesValue" Classes="value" Text="-" /></StackPanel>
+                    </Border>
+                    <Border Classes="card" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Classes="label" Text="Time on battery" /><TextBlock Name="OnBatteryValue" Classes="value" Text="-" /></StackPanel>
+                    </Border>
+                    <Border Classes="card" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Classes="label" Text="Longest outage" /><TextBlock Name="LongestValue" Classes="value" Text="-" /></StackPanel>
+                    </Border>
+                    <Border Classes="card" Margin="0,0,8,0">
+                        <StackPanel><TextBlock Classes="label" Text="Lowest battery" /><TextBlock Name="LowestValue" Classes="value" Text="-" /></StackPanel>
+                    </Border>
+                    <Border Classes="card">
+                        <StackPanel><TextBlock Classes="label" Text="Average load (peak)" /><TextBlock Name="LoadValue" Classes="value" Text="-" /></StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- Hover readout -->
+                <!-- Fixed height so the charts never move while you point at them. -->
+                <Border Classes="card" Padding="14,8" Margin="0,0,0,10" Height="60">
+                    <TextBlock Name="Readout" TextWrapping="Wrap" FontSize="13" MaxLines="2" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"
+                               Text="Point at a chart to see every reading at that moment. Drag to pan, scroll to zoom; all charts move together." />
+                </Border>
+
+                <TextBlock Name="EmptyText" IsVisible="False" Margin="0,40" HorizontalAlignment="Center" Opacity="0.7"
+                           Text="No history for this UPS in this time range yet." />
+                <StackPanel Name="Charts" Spacing="10" />
+
+                <TextBlock Classes="section" Text="Power outages" />
+                <TextBlock Name="NoOutages" Text="None in this time range." Opacity="0.7" />
+                <ItemsControl Name="OutageList" />
+
+                <TextBlock Classes="section" Text="Events" />
+                <ItemsControl Name="EventList" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

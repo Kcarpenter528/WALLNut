@@ -84,6 +84,21 @@ public sealed class ShutdownOptions
     public double FinalDelaySeconds { get; set; } = 5;
 }
 
+/// <summary>Recording readings and events for charts.</summary>
+public sealed class HistoryOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>The SQLite file. Default: history.db next to the machine settings file.</summary>
+    public string? DatabasePath { get; set; }
+
+    public int SampleIntervalSeconds { get; set; } = 15;
+    public int RawDays { get; set; } = 3;
+    public int FiveMinuteDays { get; set; } = 90;
+    public int HourlyDays { get; set; } = 730;
+    public int EventDays { get; set; } = 730;
+}
+
 public sealed class ReconnectOptions
 {
     public double InitialDelaySeconds { get; set; } = 2;
@@ -101,6 +116,8 @@ public sealed class WallNutOptions
     public ReconnectOptions Reconnect { get; set; } = new();
 
     public ShutdownOptions Shutdown { get; set; } = new();
+
+    public HistoryOptions History { get; set; } = new();
 
     /// <summary>Problems that would stop monitoring from working, in plain words. Empty when valid.</summary>
     public IReadOnlyList<string> Validate()

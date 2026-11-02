@@ -86,6 +86,24 @@ grey = service not running). Click it for notification settings: a master switch
 hides short power blips, per-group and per-event switches, and per-UPS muting. Settings are
 saved per user. Shutdown warnings can't be turned off.
 
+## History and charts
+
+The service records every UPS's readings and events in SQLite (`history.db` in the data folder:
+`C:\ProgramData\WALLNut`, `/var/lib/wallnut` or `/Library/Application Support/WALLNut`), even
+when nobody is logged in. To keep it small it stores every 15-second sample for 3 days, then
+5-minute and hourly average / min / max for 90 days and 2 years.
+
+Click the tray icon (or **History and charts...**) for stacked, linked charts: battery, load,
+power, voltage and frequency, temperatures, and per-phase or per-outlet readings where the UPS
+reports them. Outages are shaded on every chart, summary cards show outage counts and lowest
+battery, and the range can be exported as CSV. `WALLNut --history --range=30d` opens it directly.
+
+To try the charts without waiting weeks, fill a development database with simulated history:
+
+```bash
+dotnet run --project src/WallNut.Simulator -- seed-history --days 30
+```
+
 ## Configuring UPS endpoints
 
 Edit `src/WallNut.Service/appsettings.json`. Each entry under `WallNut:Endpoints` is one UPS with

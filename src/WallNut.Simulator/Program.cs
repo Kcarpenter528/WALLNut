@@ -9,6 +9,29 @@ using WallNut.Simulator;
 //   wallnut-sim --port 3494 --ups lab=full-featured --speed 10
 //   wallnut-sim --bind 0.0.0.0                   reachable from other machines on your network
 
+// wallnut-sim seed-history [--db PATH] [--days 30] [--seed 1]: write realistic past data for the charts.
+if (args.Length > 0 && args[0] == "seed-history")
+{
+    string db = HistorySeeder.DefaultDatabase;
+    int days = 30, seed = 1;
+    for (int i = 1; i < args.Length; i++)
+    {
+        string Value() => i + 1 < args.Length ? args[++i] : throw new ArgumentException($"{args[i]} needs a value");
+        switch (args[i])
+        {
+            case "--db": db = Value(); break;
+            case "--days": days = int.Parse(Value(), CultureInfo.InvariantCulture); break;
+            case "--seed": seed = int.Parse(Value(), CultureInfo.InvariantCulture); break;
+            default: Console.Error.WriteLine($"Unknown option {args[i]}"); return 2;
+        }
+    }
+    Console.WriteLine($"Simulating {days} days for {HistorySeeder.DevDefaults.Length} UPSes...");
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    HistorySeeder.Seed(db, HistorySeeder.DevDefaults, days, seed, Console.Out);
+    Console.WriteLine($"Done in {sw.Elapsed.TotalSeconds:0.0}s.");
+    return 0;
+}
+
 var port = NutProtocol.DefaultPort;
 var bind = IPAddress.Loopback;
 var speed = 1.0;

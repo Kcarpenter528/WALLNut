@@ -40,6 +40,11 @@ public static class ServiceHost
         builder.Services.AddSingleton<IUpsEventSink, LoggingEventSink>();
         builder.Services.AddSingleton<IUpsEventSink>(sp => sp.GetRequiredService<EventHub>());
 
+        // History: readings and events in SQLite, for charts.
+        builder.Services.AddSingleton<HistoryRecording.HistoryDatabase>();
+        builder.Services.AddSingleton<IUpsEventSink, HistoryRecording.HistoryEventSink>();
+        builder.Services.AddHostedService<HistoryRecording.HistoryRecorder>();
+
         builder.Services.AddHostedService<MonitorService>();
 
         // Test mode unless WallNut:Shutdown:DryRun is explicitly false.
@@ -50,7 +55,9 @@ public static class ServiceHost
         builder.Services.AddHostedService(sp => sp.GetRequiredService<ShutdownCoordinator>());
 
         // Local-only API for the tray and desktop apps (named pipe / Unix socket, no network port).
-        var endpoint = builder.Configuration["WallNut:Api:Endpoint"] ?? ServiceEndpoint.Default;
+        var endpoint = builder.Configuration["WallNut:Api:Endpoint"] is { Length: > 0 } configured
+            ? ServiceEndpoint.Resolve(configured)
+            : ServiceEndpoint.Default;
         builder.UseLocalEndpoint(endpoint);
 
         builder.Logging.ClearProviders();

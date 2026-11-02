@@ -27,10 +27,12 @@
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="ScottPlot.Avalonia" Version="5.1.59" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\WallNut.Shared\WallNut.Shared.csproj" />
+    <ProjectReference Include="..\WallNut.Charts\WallNut.Charts.csproj" />
   </ItemGroup>
 
   <!-- SkiaSharp/HarfBuzz packages ship ~100 MB of native debug symbols; installs don't need them. -->

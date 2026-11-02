@@ -17,7 +17,7 @@ public sealed class WallNutServiceClient : IDisposable
 
     public WallNutServiceClient(string? endpoint = null)
     {
-        Endpoint = endpoint ?? ServiceEndpoint.Default;
+        Endpoint = endpoint is null ? ServiceEndpoint.Default : ServiceEndpoint.Resolve(endpoint);
         var handler = new SocketsHttpHandler
         {
             ConnectCallback = async (_, ct) =>
@@ -55,6 +55,47 @@ public sealed class WallNutServiceClient : IDisposable
 
     public async Task<IReadOnlyList<ServiceEvent>> GetRecentEventsAsync(CancellationToken ct = default) =>
         await _http.GetFromJsonAsync("api/events/recent", WallNutJsonContext.Default.ListServiceEvent, ct) ?? [];
+
+    // ---- History ---------------------------------------------------------------------------
+
+    public async Task<IReadOnlyList<History.HistoryEndpoint>> GetHistoryEndpointsAsync(CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync("api/history/endpoints", WallNutJsonContext.Default.ListHistoryEndpoint, ct) ?? [];
+
+    public async Task<IReadOnlyList<History.MetricAvailability>> GetHistoryMetricsAsync(string endpoint, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync($"api/history/metrics?endpoint={Uri.EscapeDataString(endpoint)}",
+            WallNutJsonContext.Default.ListMetricAvailability, ct) ?? [];
+
+    /// <summary>Readings for a time range, in about <paramref name="points"/> buckets per metric. No metrics = all recorded ones.</summary>
+    public async Task<History.HistoryResult> GetHistoryAsync(string endpoint, DateTimeOffset from, DateTimeOffset to,
+        IEnumerable<string>? metrics = null, int points = 800, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync(
+            $"api/history/series?endpoint={Uri.EscapeDataString(endpoint)}&from={Iso(from)}&to={Iso(to)}&points={points}" +
+            (metrics is null ? "" : "&metrics=" + Uri.EscapeDataString(string.Join(',', metrics))),
+            WallNutJsonContext.Default.HistoryResult, ct)
+        ?? throw new InvalidDataException("Empty history reply.");
+
+    public async Task<IReadOnlyList<ServiceEvent>> GetHistoryEventsAsync(string? endpoint, DateTimeOffset from, DateTimeOffset to,
+        int limit = 500, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync(
+            $"api/history/events?from={Iso(from)}&to={Iso(to)}&limit={limit}" + (endpoint is null ? "" : "&endpoint=" + Uri.EscapeDataString(endpoint)),
+            WallNutJsonContext.Default.ListServiceEvent, ct) ?? [];
+
+    public async Task<History.OutageSummary> GetOutagesAsync(string? endpoint, DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync(
+            $"api/history/outages?from={Iso(from)}&to={Iso(to)}" + (endpoint is null ? "" : "&endpoint=" + Uri.EscapeDataString(endpoint)),
+            WallNutJsonContext.Default.OutageSummary, ct)
+        ?? throw new InvalidDataException("Empty outage reply.");
+
+    /// <summary>Downloads readings as CSV into <paramref name="destination"/>.</summary>
+    public async Task ExportCsvAsync(string endpoint, DateTimeOffset from, DateTimeOffset to, Stream destination, CancellationToken ct = default)
+    {
+        using var reply = await _http.GetAsync($"api/history/export?endpoint={Uri.EscapeDataString(endpoint)}&from={Iso(from)}&to={Iso(to)}",
+            HttpCompletionOption.ResponseHeadersRead, ct);
+        reply.EnsureSuccessStatusCode();
+        await reply.Content.CopyToAsync(destination, ct);
+    }
+
+    private static string Iso(DateTimeOffset t) => Uri.EscapeDataString(t.UtcDateTime.ToString("o", System.Globalization.CultureInfo.InvariantCulture));
 
     /// <summary>Asks the service to send a test event through every channel (desktop, and later phone and webhooks).</summary>
     public async Task SendTestAsync(CancellationToken ct = default)

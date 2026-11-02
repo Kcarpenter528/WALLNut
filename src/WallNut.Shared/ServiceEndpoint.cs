@@ -16,7 +16,7 @@ public static class ServiceEndpoint
         get
         {
             var overridden = Environment.GetEnvironmentVariable(OverrideVariable);
-            if (!string.IsNullOrWhiteSpace(overridden)) return overridden;
+            if (!string.IsNullOrWhiteSpace(overridden)) return Resolve(overridden);
             if (OperatingSystem.IsWindows()) return DefaultPipeName;
 
             // The installed service (root) listens on a system-wide socket that the tray app (a normal
@@ -30,4 +30,15 @@ public static class ServiceEndpoint
 
     /// <summary>Unix socket paths contain a slash; anything else is a Windows pipe name.</summary>
     public static bool IsSocketPath(string endpoint) => endpoint.Contains('/');
+
+    /// <summary>
+    /// Makes a configured endpoint usable on this OS: on macOS/Linux a plain name such as
+    /// "WallNut.Service.Dev" becomes a socket file in the runtime directory.
+    /// </summary>
+    public static string Resolve(string endpoint)
+    {
+        if (OperatingSystem.IsWindows() || IsSocketPath(endpoint)) return endpoint;
+        var runtimeDir = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
+        return Path.Combine(string.IsNullOrEmpty(runtimeDir) ? Path.GetTempPath() : runtimeDir, endpoint + ".sock");
+    }
 }

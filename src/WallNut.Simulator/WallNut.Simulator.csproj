@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WallNut.Nut\WallNut.Nut.csproj" />
+    <ProjectReference Include="..\WallNut.History\WallNut.History.csproj" />
   </ItemGroup>
 
 </Project>

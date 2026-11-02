@@ -14,6 +14,10 @@ namespace WallNut.Shared;
 [JsonSerializable(typeof(ServiceEvent))]
 [JsonSerializable(typeof(List<ServiceEvent>))]
 [JsonSerializable(typeof(NotificationPreferences))]
+[JsonSerializable(typeof(History.HistoryResult))]
+[JsonSerializable(typeof(List<History.MetricAvailability>))]
+[JsonSerializable(typeof(List<History.HistoryEndpoint>))]
+[JsonSerializable(typeof(History.OutageSummary))]
 public partial class WallNutJsonContext : JsonSerializerContext;
 
 public static class WallNutJson

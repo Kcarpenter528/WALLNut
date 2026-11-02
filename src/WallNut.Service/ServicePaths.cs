@@ -28,4 +28,17 @@ public static class ServicePaths
             return "/etc/wallnut/config.json";
         }
     }
+
+    /// <summary>
+    /// Where the service keeps data such as history: C:\ProgramData\WALLNut, /var/lib/wallnut or
+    /// /Library/Application Support/WALLNut.
+    /// </summary>
+    public static string DataDirectory =>
+        OperatingSystem.IsWindows() ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "WALLNut")
+        : OperatingSystem.IsMacOS() ? "/Library/Application Support/WALLNut"
+        : "/var/lib/wallnut";
+
+    /// <summary>Fallback for development runs that can't write to <see cref="DataDirectory"/> (it's admin-only).</summary>
+    public static string UserDataDirectory =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WALLNut");
 }

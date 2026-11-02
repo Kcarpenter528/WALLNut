@@ -59,6 +59,8 @@ public partial class App : Application
             _connection.Start();
 
             if (args(desktop).Contains("--settings")) OpenSettings();
+            if (args(desktop).Contains("--history"))
+                OpenHistory(args(desktop).FirstOrDefault(a => a.StartsWith("--range=", StringComparison.Ordinal))?["--range=".Length..]);
         }
         base.OnFrameworkInitializationCompleted();
 
@@ -68,6 +70,9 @@ public partial class App : Application
     private void BuildTray(IClassicDesktopStyleApplicationLifetime desktop)
     {
         _statusItem = new NativeMenuItem("Connecting to WALLNut service...") { IsEnabled = false };
+
+        var history = new NativeMenuItem("History and charts...");
+        history.Click += (_, _) => OpenHistory();
 
         var settings = new NativeMenuItem("Notification settings...");
         settings.Click += (_, _) => OpenSettings();
@@ -82,9 +87,9 @@ public partial class App : Application
         {
             Icon = _icons[TrayState.Offline],
             ToolTipText = "WALLNut",
-            Menu = new NativeMenu { Items = { _statusItem, new NativeMenuItemSeparator(), settings, test, new NativeMenuItemSeparator(), quit } },
+            Menu = new NativeMenu { Items = { _statusItem, new NativeMenuItemSeparator(), history, settings, test, new NativeMenuItemSeparator(), quit } },
         };
-        _tray.Clicked += (_, _) => OpenSettings();
+        _tray.Clicked += (_, _) => OpenHistory();
         TrayIcon.SetIcons(this, [_tray]);
     }
 
@@ -154,6 +159,17 @@ public partial class App : Application
     {
         prefs.Save();
         _prefs = prefs; // swapped in one step; the filter always reads the current object
+    }
+
+    private HistoryWindow? _history;
+
+    private void OpenHistory(string? range = null)
+    {
+        if (_history is { } open) { open.Activate(); return; }
+        _history = new HistoryWindow(_connection.Client) { InitialRange = range };
+        _history.Closed += (_, _) => _history = null;
+        _history.Show();
+        _history.Activate();
     }
 
     private void OpenSettings()

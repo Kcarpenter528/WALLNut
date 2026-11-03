@@ -81,13 +81,14 @@ public sealed class SettingsApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Real_identity_check_sees_this_user_as_not_elevated()
+    public async Task Real_identity_check_sees_who_is_calling()
     {
         var (c, _) = await Start(admin: null); // the real pipe/socket check
         var me = await c.GetCallerAsync();
         Assert.Contains(Environment.UserName, me.User ?? "", StringComparison.OrdinalIgnoreCase);
-        // Tests run un-elevated, so this is an ordinary user.
-        if (!Environment.IsPrivilegedProcess) Assert.False(me.IsAdmin);
+        // Here the service runs as the same account as the caller, which may change settings
+        // (it could edit the file anyway). An installed service runs as SYSTEM, so ordinary users can't.
+        Assert.True(me.IsAdmin);
     }
 
     [Fact]

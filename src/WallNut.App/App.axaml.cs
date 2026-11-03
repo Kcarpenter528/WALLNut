@@ -90,6 +90,7 @@ public partial class App : Application
                             case "history": w.ShowHistory(); break;
                             case "settings": w.ShowSettings(); break;
                             case "shutdown": w.ShowSettings("Shutdown"); break;
+                            case "actions": w.ShowSettings("Alerts & actions"); break;
                             default: w.ShowOverview(); break;
                         }
                     });

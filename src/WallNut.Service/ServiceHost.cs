@@ -40,6 +40,14 @@ public static class ServiceHost
         builder.Services.AddSingleton<IUpsEventSink, LoggingEventSink>();
         builder.Services.AddSingleton<IUpsEventSink>(sp => sp.GetRequiredService<EventHub>());
 
+        // Alerts and actions: phone alerts, webhooks (scripts and email follow).
+        builder.Services.AddHttpClient("actions");
+        builder.Services.AddSingleton<Actions.IActionSender, Actions.NtfySender>();
+        builder.Services.AddSingleton<Actions.IActionSender, Actions.WebhookSender>();
+        builder.Services.AddSingleton<Actions.ActionDispatcher>();
+        builder.Services.AddSingleton<IUpsEventSink>(sp => sp.GetRequiredService<Actions.ActionDispatcher>());
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<Actions.ActionDispatcher>());
+
         // History: readings and events in SQLite, for charts.
         builder.Services.AddSingleton<HistoryRecording.HistoryDatabase>();
         builder.Services.AddSingleton<IUpsEventSink, HistoryRecording.HistoryEventSink>();

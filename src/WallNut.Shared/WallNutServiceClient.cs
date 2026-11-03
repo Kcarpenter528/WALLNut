@@ -84,6 +84,29 @@ public sealed class WallNutServiceClient : IDisposable
     public Task SaveShutdownAsync(Settings.ShutdownSettings shutdown, CancellationToken ct = default) =>
         SendSettingsAsync(HttpMethod.Put, "api/config/shutdown", JsonContent.Create(shutdown, WallNutJsonContext.Default.ShutdownSettings), ct);
 
+    /// <summary>Adds or replaces an alert/action. Throws <see cref="SettingsException"/> with the reasons if refused.</summary>
+    public Task SaveActionAsync(Actions.ActionConfig action, CancellationToken ct = default) =>
+        SendSettingsAsync(HttpMethod.Put, $"api/config/actions/{Uri.EscapeDataString(action.Id)}",
+            JsonContent.Create(action, WallNutJsonContext.Default.ActionConfig), ct);
+
+    public Task DeleteActionAsync(string id, CancellationToken ct = default) =>
+        SendSettingsAsync(HttpMethod.Delete, $"api/config/actions/{Uri.EscapeDataString(id)}", null, ct);
+
+    /// <summary>
+    /// Runs an action once with a test event, using the settings given (unsaved changes included;
+    /// stored secrets fill in what's left blank). Administrators only, since it can run scripts.
+    /// </summary>
+    public async Task<Actions.ActionTestResult> TestActionAsync(Actions.ActionConfig action, CancellationToken ct = default)
+    {
+        using var reply = await _http.PostAsync("api/config/actions/test",
+            JsonContent.Create(action, WallNutJsonContext.Default.ActionConfig), ct);
+        if (reply.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            return new Actions.ActionTestResult(false, "Only an administrator can test actions.");
+        reply.EnsureSuccessStatusCode();
+        return await reply.Content.ReadFromJsonAsync(WallNutJsonContext.Default.ActionTestResult, ct)
+               ?? throw new InvalidDataException("Empty reply.");
+    }
+
     /// <summary>Tries a connection without saving it.</summary>
     public async Task<Settings.EndpointTestResult> TestEndpointAsync(Settings.EndpointConfig endpoint, CancellationToken ct = default)
     {

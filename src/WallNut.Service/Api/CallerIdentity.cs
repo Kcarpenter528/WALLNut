@@ -43,13 +43,17 @@ public static class CallerIdentity
     private static (string?, bool) FromPipe(System.IO.Pipes.NamedPipeServerStream pipe)
     {
         (string?, bool) result = (null, false);
+        using var service = WindowsIdentity.GetCurrent();
+        var serviceAccount = service.User;
         // The client connects with "Identification" level, so we can look at its token without acting as it.
         pipe.RunAsClient(() =>
         {
             using var id = WindowsIdentity.GetCurrent(TokenAccessLevels.Query);
             var principal = new WindowsPrincipal(id);
             // IsInRole only sees Administrators in an elevated token, which is what UAC intends.
-            result = (id.Name, id.IsSystem || principal.IsInRole(WindowsBuiltInRole.Administrator));
+            // The account the service runs as could edit its settings file anyway, so it's trusted too
+            // (in production that's SYSTEM; for a developer's own copy, it's them).
+            result = (id.Name, id.IsSystem || principal.IsInRole(WindowsBuiltInRole.Administrator) || id.User == serviceAccount);
         });
         return result;
     }
@@ -74,6 +78,10 @@ public static class CallerIdentity
             uid = BitConverter.ToInt32(buffer[4..8]);
         }
         else return (null, false);
-        return (uid == 0 ? "root" : $"uid {uid}", uid == 0);
+        // root, or the account the service itself runs as (which could edit its settings file anyway).
+        return (uid == 0 ? "root" : $"uid {uid}", uid == 0 || uid == geteuid());
     }
+
+    [System.Runtime.InteropServices.DllImport("libc", SetLastError = false)]
+    private static extern uint geteuid();
 }

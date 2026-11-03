@@ -50,6 +50,9 @@ public enum UpsEventKind
 
     /// <summary>A test notification someone asked for (settings screen "Send test").</summary>
     Test,
+
+    /// <summary>An alert or action (phone alert, webhook, script, email) couldn't be delivered.</summary>
+    ActionFailed,
 }
 
 /// <summary>Something that happened to one UPS endpoint.</summary>

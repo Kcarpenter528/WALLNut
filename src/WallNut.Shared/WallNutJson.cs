@@ -25,6 +25,8 @@ namespace WallNut.Shared;
 [JsonSerializable(typeof(Settings.CallerInfo))]
 [JsonSerializable(typeof(Settings.SettingsProblem))]
 [JsonSerializable(typeof(Settings.UpsDetail))]
+[JsonSerializable(typeof(Actions.ActionConfig))]
+[JsonSerializable(typeof(Actions.ActionTestResult))]
 public partial class WallNutJsonContext : JsonSerializerContext;
 
 public static class WallNutJson

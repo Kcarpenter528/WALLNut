@@ -21,6 +21,7 @@ public sealed class SettingsPage : UserControl, IPage
     private readonly ShutdownView _shutdown;
     private readonly AboutView _about;
     private readonly NotificationSettingsView _notifications;
+    private readonly ActionsView _actions;
     private readonly TextBlock _error = new() { Foreground = UpsLook.Critical, TextWrapping = TextWrapping.Wrap };
 
     public SettingsPage(App app)
@@ -30,10 +31,12 @@ public sealed class SettingsPage : UserControl, IPage
         _shutdown = new ShutdownView(app, this);
         _about = new AboutView(app);
         _notifications = new NotificationSettingsView(app);
+        _actions = new ActionsView(app);
         var tabs = new List<TabItem>
         {
             new() { Header = "UPS connections", Content = _connections },
             new() { Header = "Shutdown", Content = _shutdown },
+            new() { Header = "Alerts & actions", Content = _actions },
         };
         // Notification choices belong to the logged-in user, not the elevated settings copy.
         if (!app.AdminMode) tabs.Add(new TabItem { Header = "Notifications", Content = _notifications });
@@ -74,6 +77,7 @@ public sealed class SettingsPage : UserControl, IPage
             _notifications.UpdateService(info);
             _connections.Show(this, data);
             _shutdown.Show(data);
+            _actions.Show(this, data);
             _about.Show(view);
         }
         catch (Exception e) { _error.Text = "Can't load settings from the WALLNut service: " + e.Message; }

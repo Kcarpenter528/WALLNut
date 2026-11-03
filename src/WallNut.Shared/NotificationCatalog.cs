@@ -44,6 +44,7 @@ public static class NotificationCatalog
         new("NotOff", NotificationGroup.Warnings, "UPS outlets on", NotificationUrgency.Low),
         new("Alarm", NotificationGroup.Warnings, "UPS alarm", NotificationUrgency.Normal),
         new("AlarmCleared", NotificationGroup.Warnings, "UPS alarm cleared", NotificationUrgency.Low),
+        new("ActionFailed", NotificationGroup.Warnings, "Alert or action failed", NotificationUrgency.Normal),
 
         new("Connected", NotificationGroup.Informational, "Connected to UPS", NotificationUrgency.Low, OnByDefault: false),
         new("Calibrating", NotificationGroup.Informational, "Battery calibration", NotificationUrgency.Low, OnByDefault: false),

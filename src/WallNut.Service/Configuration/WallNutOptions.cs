@@ -119,6 +119,9 @@ public sealed class WallNutOptions
 
     public HistoryOptions History { get; set; } = new();
 
+    /// <summary>Alerts and actions (phone alerts, webhooks, scripts, email), keyed by a short id.</summary>
+    public Dictionary<string, ActionOptions> Actions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Problems that would stop monitoring from working, in plain words. Empty when valid.</summary>
     public IReadOnlyList<string> Validate()
     {
@@ -152,6 +155,17 @@ public sealed class WallNutOptions
         if (Shutdown.MinimumSupplies < 1) problems.Add("Shutdown:MinimumSupplies must be at least 1.");
         if (Shutdown.LostWhileOnBatterySeconds < 0 || Shutdown.FinalDelaySeconds < 0)
             problems.Add("Shutdown delays can't be negative.");
+        return problems;
+    }
+
+    /// <summary>
+    /// Problems with the enabled actions. Kept apart from <see cref="Validate"/> on purpose: a broken
+    /// action (say, a missing script) must never stop UPS monitoring or shutdown.
+    /// </summary>
+    public IReadOnlyList<string> ValidateActions()
+    {
+        var problems = new List<string>();
+        foreach (var (id, a) in Actions.Where(a => a.Value.Enabled)) problems.AddRange(ActionValidation.Validate(id, a));
         return problems;
     }
 }

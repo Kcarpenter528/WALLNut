@@ -49,7 +49,8 @@ public sealed record SettingsView(
     /// <summary>Why editing isn't possible, in plain words (null when it is).</summary>
     string? ReadOnlyReason,
     IReadOnlyList<EndpointConfig> Endpoints,
-    ShutdownSettings Shutdown);
+    ShutdownSettings Shutdown,
+    IReadOnlyList<Actions.ActionConfig>? Actions = null);
 
 /// <summary>Result of trying a connection before saving it.</summary>
 public sealed record EndpointTestResult(

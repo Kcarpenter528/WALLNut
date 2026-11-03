@@ -87,6 +87,7 @@ public static class LocalApi
         var api = app.MapGroup("/api");
         api.MapHistoryApi();
         api.MapSettingsApi();
+        api.MapActionsApi();
 
         api.MapGet("/info", (UpsStateStore store, IOptionsMonitor<WallNutOptions> options, ShutdownCoordinator coordinator) =>
         {

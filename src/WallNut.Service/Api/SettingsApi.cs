@@ -36,7 +36,8 @@ public static class SettingsApi
             var o = options.CurrentValue;
             return new SettingsView(file.Path, reason is null, reason,
                 o.Endpoints.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase).Select(e => ToView(e.Key, e.Value)).ToList(),
-                ToView(o.Shutdown));
+                ToView(o.Shutdown),
+                o.Actions.OrderBy(a => a.Key, StringComparer.OrdinalIgnoreCase).Select(a => ActionsApi.ToView(a.Key, a.Value)).ToList());
         });
 
         api.MapPut("/config/endpoints/{id}", (string id, EndpointConfig body, HttpContext http, ICallerIdentity callers,
@@ -242,5 +243,6 @@ public static class SettingsApi
         Reconnect = o.Reconnect,
         Shutdown = o.Shutdown,
         History = o.History,
+        Actions = o.Actions,
     };
 }

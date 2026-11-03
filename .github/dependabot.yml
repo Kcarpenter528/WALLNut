@@ -1,11 +1,47 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot checks for newer versions every week and opens a pull request for each group below.
+# CI runs on every one, so a green check means the update builds and passes the tests on Windows,
+# Linux and macOS. Security fixes are opened straight away, whatever the schedule.
+# Options: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # NuGet packages in every project under src/ and tests/ (found through WallNut.slnx).
+  - package-ecosystem: "nuget"
+    directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    labels: ["dependencies"]
+    ignore:
+      # These follow .NET's own version (10.x on .NET 10). Moving to 11.x means moving the whole
+      # app to .NET 11, which is a deliberate upgrade, not a weekly bump.
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Data.Sqlite"
+        update-types: ["version-update:semver-major"]
+    # Packages that are released together are updated together, in one pull request.
+    groups:
+      avalonia:
+        patterns: ["Avalonia*", "AvaloniaUI.*"]
+      scottplot:
+        patterns: ["ScottPlot*"]
+      dotnet-libraries:
+        patterns: ["Microsoft.Extensions.Hosting.*", "Microsoft.Data.Sqlite"]
+      testing:
+        patterns: ["xunit*", "Microsoft.NET.Test.Sdk", "coverlet.*", "Microsoft.Extensions.TimeProvider.Testing"]
+
+  # Versions of the actions used in .github/workflows (checkout, setup-dotnet, upload-artifact...).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "ci"
+    labels: ["dependencies"]
+    groups:
+      actions:
+        patterns: ["*"]

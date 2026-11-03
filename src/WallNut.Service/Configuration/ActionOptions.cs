@@ -101,6 +101,8 @@ public static class ActionValidation
                 if (e.Security is not ("StartTls" or "SslOnConnect" or "None")) p.Add($"{Where}: security must be StartTls, SslOnConnect or None.");
                 if (!IsEmail(e.From)) p.Add($"{Where}: the From address isn't a valid email address.");
                 if (e.To.Count == 0 || !e.To.All(IsEmail)) p.Add($"{Where}: enter at least one valid recipient.");
+                if (e.Security == "None" && !string.IsNullOrEmpty(e.Password) && !IsLocal(e.Host))
+                    p.Add($"{Where}: the password would be sent unencrypted. Choose STARTTLS or SSL, or use a mail server on this computer.");
                 break;
         }
         return p;
@@ -108,6 +110,9 @@ public static class ActionValidation
 
     private static bool IsHttpUrl(string? s) =>
         Uri.TryCreate(s, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps);
+
+    private static bool IsLocal(string host) =>
+        host.Trim() is "localhost" or "127.0.0.1" or "::1" or "[::1]";
 
     private static bool IsEmail(string? s) => System.Net.Mail.MailAddress.TryCreate(s, out _);
 }

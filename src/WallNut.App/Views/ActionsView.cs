@@ -12,7 +12,7 @@ using WallNut.Shared.Actions;
 
 namespace WallNut.App.Views;
 
-/// <summary>Settings tab: alerts and actions the service runs (phone alerts, webhooks, scripts; email next).</summary>
+/// <summary>Settings tab: alerts and actions the service runs (phone alerts, email, webhooks and scripts).</summary>
 public sealed class ActionsView : UserControl
 {
     private readonly App _app;
@@ -55,6 +55,18 @@ public sealed class ActionsView : UserControl
     private readonly TextBox _secret = new() { PasswordChar = '•', PlaceholderText = "optional: sign requests (X-WallNut-Signature)" };
     private readonly StackPanel _customFields = new() { Spacing = 10 };
 
+    // Email fields.
+    private readonly ComboBox _emailPreset = new() { ItemsSource = EmailPresets.All.Select(p => p.Name).ToList(), SelectedIndex = 0, MinWidth = 260 };
+    private readonly TextBlock _emailHelp = new() { FontSize = 12, Opacity = 0.65, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBox _smtpHost = new() { PlaceholderText = "smtp.example.com" };
+    private readonly NumericUpDown _smtpPort = new() { Minimum = 1, Maximum = 65535, Value = 587, FormatString = "0", Width = 130 };
+    private readonly ComboBox _smtpSecurity = new() { ItemsSource = EmailPresets.SecurityOptions.Select(EmailPresets.DescribeSecurity).ToList(), SelectedIndex = 0, MinWidth = 260 };
+    private readonly TextBox _smtpUser = new() { PlaceholderText = "usually your email address (blank = the From address)" };
+    private readonly TextBox _smtpPassword = new() { PasswordChar = '•' };
+    private readonly TextBox _emailFrom = new() { PlaceholderText = "you@example.com" };
+    private readonly TextBox _emailTo = new() { PlaceholderText = "you@example.com, someone@example.com" };
+    private bool _fillingPreset;
+
     // Script fields.
     private readonly TextBox _scriptPath = new() { PlaceholderText = OperatingSystem.IsWindows() ? @"C:\ProgramData\WALLNut\scripts\on-battery.ps1" : "/etc/wallnut/scripts/on-battery.sh" };
     private readonly TextBox _scriptArgs = new() { PlaceholderText = "optional, e.g. {event} \"{ups}\"", FontFamily = new FontFamily("Cascadia Mono, Consolas, Menlo, monospace") };
@@ -69,7 +81,7 @@ public sealed class ActionsView : UserControl
     {
         _app = app;
         _admin = new AdminBanner(app);
-        foreach (var type in new[] { ActionTypes.Ntfy, ActionTypes.Webhook, ActionTypes.Script })
+        foreach (var type in new[] { ActionTypes.Ntfy, ActionTypes.Email, ActionTypes.Webhook, ActionTypes.Script })
         {
             var b = new Button { Content = "+ " + ActionTypes.Describe(type) };
             b.Click += (_, _) => Edit(null, type);
@@ -84,6 +96,7 @@ public sealed class ActionsView : UserControl
         _ntfyServer.TextChanged += (_, _) => UpdateQr();
         _ntfyTopic.TextChanged += (_, _) => UpdateQr();
         _preset.SelectionChanged += (_, _) => PresetChanged();
+        _emailPreset.SelectionChanged += (_, _) => EmailPresetChanged();
 
         _customFields.Children.Add(ConnectionsView.Field("Content type", _contentType));
         _customFields.Children.Add(ConnectionsView.Field("Body", _body,
@@ -193,7 +206,7 @@ public sealed class ActionsView : UserControl
         _title.Text = (a is null ? "New " : "Edit ") + ActionTypes.Describe(type).ToLowerInvariant();
         _name.Text = a?.Name ?? "";
         _enabled.IsChecked = a?.Enabled ?? true;
-        _delay.Value = (decimal)(a?.DelaySeconds ?? (type == ActionTypes.Ntfy ? 30 : 0));
+        _delay.Value = (decimal)(a?.DelaySeconds ?? (type is ActionTypes.Ntfy or ActionTypes.Email ? 30 : 0));
         _testResult.Text = "";
 
         // Events, grouped like desktop notifications.
@@ -212,6 +225,7 @@ public sealed class ActionsView : UserControl
         _typePanel.Children.Clear();
         if (type == ActionTypes.Ntfy) BuildNtfy(a?.Ntfy);
         else if (type == ActionTypes.Script) BuildScript(a?.Script);
+        else if (type == ActionTypes.Email) BuildEmail(a?.Email);
         else BuildWebhook(a?.Webhook);
         _test.Content = type == ActionTypes.Script ? "Run test" : "Send test";
 
@@ -269,6 +283,48 @@ public sealed class ActionsView : UserControl
             w?.Headers.Count > 0 ? "Saved header values are hidden. Leave a value empty to keep it." : "For example: Authorization: Bearer <token>"));
         _typePanel.Children.Add(ConnectionsView.Field("Signing secret", _secret));
         PresetChanged();
+    }
+
+    private void BuildEmail(EmailConfig? e)
+    {
+        _fillingPreset = true;
+        var preset = e is null ? EmailPresets.All[0] : EmailPresets.ForHost(e.Host);
+        _emailPreset.SelectedIndex = EmailPresets.All.ToList().IndexOf(preset);
+        _smtpHost.Text = e?.Host ?? preset.Host;
+        _smtpPort.Value = e?.Port ?? preset.Port;
+        _smtpSecurity.SelectedIndex = Math.Max(0, EmailPresets.SecurityOptions.ToList().IndexOf(e?.Security ?? preset.Security));
+        _smtpUser.Text = e?.Username ?? "";
+        _smtpPassword.Text = "";
+        _smtpPassword.PlaceholderText = e?.PasswordSet == true ? "Leave blank to keep the saved password" : "app password (see the note above)";
+        _emailFrom.Text = e?.From ?? "";
+        _emailTo.Text = string.Join(", ", e?.To ?? []);
+        _emailHelp.Text = preset.Help;
+        _fillingPreset = false;
+
+        var server = new StackPanel { Spacing = 10, Children =
+        {
+            ConnectionsView.Field("Mail server", _smtpHost),
+            ConnectionsView.Field("Port", _smtpPort),
+            ConnectionsView.Field("Security", _smtpSecurity),
+        } };
+        _typePanel.Children.Add(ConnectionsView.Field("Provider", new StackPanel { Spacing = 4, Children = { _emailPreset, _emailHelp } }));
+        _typePanel.Children.Add(ConnectionsView.Field("From", _emailFrom));
+        _typePanel.Children.Add(ConnectionsView.Field("To", _emailTo, "Separate several addresses with commas."));
+        _typePanel.Children.Add(ConnectionsView.Field("User name", _smtpUser));
+        _typePanel.Children.Add(ConnectionsView.Field("Password", _smtpPassword,
+            "Stored in the service's settings file, which only administrators can read. Sign-in with Google or Microsoft accounts is planned."));
+        _typePanel.Children.Add(server);
+    }
+
+    private void EmailPresetChanged()
+    {
+        if (_fillingPreset || _emailPreset.SelectedIndex < 0) return;
+        var p = EmailPresets.All[_emailPreset.SelectedIndex];
+        _emailHelp.Text = p.Help;
+        if (p.Id == EmailPresets.Custom) return; // keep whatever was typed
+        _smtpHost.Text = p.Host;
+        _smtpPort.Value = p.Port;
+        _smtpSecurity.SelectedIndex = EmailPresets.SecurityOptions.ToList().IndexOf(p.Security);
     }
 
     private void BuildScript(ScriptConfig? sc)
@@ -379,6 +435,16 @@ public sealed class ActionsView : UserControl
                     .ToDictionary(p => p[0].Trim(), p => p.Length > 1 ? p[1].Trim() : "", StringComparer.OrdinalIgnoreCase),
                 Secret = string.IsNullOrEmpty(_secret.Text) ? null : _secret.Text,
             },
+            Email = _type != ActionTypes.Email ? null : new EmailConfig
+            {
+                Host = (_smtpHost.Text ?? "").Trim(),
+                Port = (int)(_smtpPort.Value ?? 587),
+                Security = EmailPresets.SecurityOptions[Math.Max(0, _smtpSecurity.SelectedIndex)],
+                Username = string.IsNullOrWhiteSpace(_smtpUser.Text) ? null : _smtpUser.Text.Trim(),
+                Password = string.IsNullOrEmpty(_smtpPassword.Text) ? null : _smtpPassword.Text,
+                From = (_emailFrom.Text ?? "").Trim(),
+                To = (_emailTo.Text ?? "").Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList(),
+            },
             Script = _type != ActionTypes.Script ? null : new ScriptConfig
             {
                 Path = (_scriptPath.Text ?? "").Trim().Trim('"'),
@@ -397,9 +463,9 @@ public sealed class ActionsView : UserControl
         try
         {
             var r = await _app.Connection.Client.TestActionAsync(FromForm());
-            _testResult.Text = !r.Ok ? r.Message
+            _testResult.Text = !r.Ok ? Capitalize(r.Message)
                 : _type == ActionTypes.Script ? "The script " + r.Message + ". Its output is in the service log."
-                : r.Message + " Check that it arrived.";
+                : Capitalize(r.Message).TrimEnd('.') + ". Check that it arrived.";
             _testResult.Foreground = r.Ok ? UpsLook.Good : UpsLook.Critical;
         }
         catch (Exception e) { _testResult.Text = "Couldn't ask the service to test it: " + e.Message; _testResult.Foreground = UpsLook.Critical; }
@@ -424,6 +490,8 @@ public sealed class ActionsView : UserControl
         catch (SettingsException e) { _message.Text = string.Join("\n", e.Problems); _message.Foreground = UpsLook.Critical; }
         catch (Exception e) { _message.Text = "Couldn't save: " + e.Message; _message.Foreground = UpsLook.Critical; }
     }
+
+    private static string Capitalize(string s) => s.Length > 0 ? char.ToUpperInvariant(s[0]) + s[1..] : s;
 
     private static string Host(string? url) => Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.Host : url ?? "";
 

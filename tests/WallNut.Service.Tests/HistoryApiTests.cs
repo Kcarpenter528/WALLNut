@@ -9,9 +9,7 @@ namespace WallNut.Service.Tests;
 /// <summary>The service recording a simulated UPS, read back through the real client.</summary>
 public sealed class HistoryApiTests : IAsyncLifetime
 {
-    private readonly string _endpoint = OperatingSystem.IsWindows()
-        ? $"WallNut.Test.{Guid.NewGuid():N}"
-        : Path.Combine(Path.GetTempPath(), $"wallnut-test-{Guid.NewGuid():N}.sock");
+    private readonly string _endpoint = TestEndpoint.New();
     private readonly string _db = Path.Combine(Path.GetTempPath(), $"wallnut-history-api-{Guid.NewGuid():N}.db");
     private SimulatorServer _sim = null!;
     private WebApplication _app = null!;

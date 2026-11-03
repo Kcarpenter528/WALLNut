@@ -37,7 +37,7 @@ public sealed class InstallConfigTests : IAsyncLifetime
 
     private WebApplication Build(string config, params string[] args)
     {
-        var endpoint = OperatingSystem.IsWindows() ? $"WallNut.Test.{Guid.NewGuid():N}" : Path.Combine(_dir, $"{Guid.NewGuid():N}.sock");
+        var endpoint = TestEndpoint.New();
         var app = ServiceHost.Build(["--environment", "Testing", $"--WallNut:Api:Endpoint={endpoint}",
             "--WallNut:History:Enabled=false", .. args], config);
         _apps.Add(app);

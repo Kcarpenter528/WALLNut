@@ -79,9 +79,27 @@ public static class CallerIdentity
         }
         else return (null, false);
         // root, or the account the service itself runs as (which could edit its settings file anyway).
-        return (uid == 0 ? "root" : $"uid {uid}", uid == 0 || uid == geteuid());
+        return (UserName((uint)uid) ?? $"uid {uid}", uid == 0 || (uint)uid == geteuid());
+    }
+
+    /// <summary>The account name for a user id, from the system's user database.</summary>
+    [UnsupportedOSPlatform("windows")]
+    private static string? UserName(uint uid)
+    {
+        try
+        {
+            // struct passwd starts with char* pw_name on both Linux and macOS.
+            var entry = getpwuid(uid);
+            if (entry == IntPtr.Zero) return null;
+            var name = System.Runtime.InteropServices.Marshal.ReadIntPtr(entry);
+            return name == IntPtr.Zero ? null : System.Runtime.InteropServices.Marshal.PtrToStringUTF8(name);
+        }
+        catch (Exception e) when (e is DllNotFoundException or EntryPointNotFoundException) { return null; }
     }
 
     [System.Runtime.InteropServices.DllImport("libc", SetLastError = false)]
     private static extern uint geteuid();
+
+    [System.Runtime.InteropServices.DllImport("libc", SetLastError = false)]
+    private static extern IntPtr getpwuid(uint uid);
 }

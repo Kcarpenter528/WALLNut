@@ -57,7 +57,7 @@ public sealed class SettingsApiTests : IAsyncLifetime
 
     private async Task<(WallNutServiceClient Client, WebApplication App)> Start(bool? admin)
     {
-        var endpoint = OperatingSystem.IsWindows() ? $"WallNut.Test.{Guid.NewGuid():N}" : Path.Combine(_dir, $"{Guid.NewGuid():N}.sock");
+        var endpoint = TestEndpoint.New();
         var app = ServiceHost.Build(
             ["--environment", "Testing", $"--WallNut:Api:Endpoint={endpoint}", "--WallNut:History:Enabled=false",
              "--Logging:LogLevel:Default=Warning"],

@@ -106,7 +106,7 @@ public sealed class ActionDeliveryTests : IAsyncLifetime
               }
             }
             """);
-        var endpoint = OperatingSystem.IsWindows() ? $"WallNut.Test.{Guid.NewGuid():N}" : Path.Combine(_dir, $"{Guid.NewGuid():N}.sock");
+        var endpoint = TestEndpoint.New();
         var app = ServiceHost.Build(
             ["--environment", "Testing", $"--WallNut:Api:Endpoint={endpoint}", "--WallNut:History:Enabled=false", "--Logging:LogLevel:Default=Warning"],
             config,

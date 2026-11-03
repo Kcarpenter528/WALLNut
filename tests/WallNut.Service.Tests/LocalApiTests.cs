@@ -9,9 +9,7 @@ namespace WallNut.Service.Tests;
 /// <summary>The real service, started in-process on its own pipe, talked to through the real client.</summary>
 public sealed class LocalApiTests : IAsyncLifetime
 {
-    private readonly string _endpoint = OperatingSystem.IsWindows()
-        ? $"WallNut.Test.{Guid.NewGuid():N}"
-        : Path.Combine(Path.GetTempPath(), $"wallnut-test-{Guid.NewGuid():N}.sock");
+    private readonly string _endpoint = TestEndpoint.New();
     private SimulatorServer _sim = null!;
     private WebApplication _app = null!;
 

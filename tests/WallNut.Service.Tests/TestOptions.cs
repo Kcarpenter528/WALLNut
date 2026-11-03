@@ -14,3 +14,12 @@ internal static class TestOptions
 {
     public static IOptionsMonitor<T> Fixed<T>(T value) => new FixedOptions<T>(value);
 }
+
+/// <summary>A fresh local API address for one test: a named pipe, or a short Unix socket path.</summary>
+internal static class TestEndpoint
+{
+    // macOS limits socket paths to 104 characters, and its temp folder is long, so use /tmp.
+    public static string New() => OperatingSystem.IsWindows()
+        ? $"WallNut.Test.{Guid.NewGuid():N}"
+        : $"/tmp/wn-{Guid.NewGuid().ToString("N")[..12]}.sock";
+}

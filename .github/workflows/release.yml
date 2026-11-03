@@ -38,7 +38,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -125,37 +125,37 @@ jobs:
 
       # ---- One artifact per file, named after it ------------------------------------------
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: runner.os == 'Windows'
         with:
           name: WALLNut-${{ matrix.rid }}-setup.exe
           path: dist/*-setup.exe
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: runner.os == 'Windows'
         with:
           name: WALLNut-${{ matrix.rid }}.zip
           path: dist/*.zip
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: runner.os == 'macOS'
         with:
           name: WALLNut-${{ matrix.rid }}.pkg
           path: dist/*.pkg
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: runner.os == 'Linux'
         with:
           name: WALLNut-${{ matrix.rid }}.deb
           path: dist/*.deb
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: runner.os == 'Linux'
         with:
           name: WALLNut-${{ matrix.rid }}.rpm
           path: dist/*.rpm
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: runner.os != 'Windows'
         with:
           name: WALLNut-${{ matrix.rid }}.tar.gz
@@ -170,7 +170,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: WALLNut-*
           path: dist

@@ -185,6 +185,23 @@ public sealed class ScriptActionTests : IDisposable
     }
 
     [Fact]
+    public void Placeholder_values_cannot_break_out_of_their_argument()
+    {
+        // Values like the status and message come from the NUT server, so treat them as untrusted.
+        var m = ActionMessage.Test() with { Message = "power\r\nfailed\0 \"quoted\" 100%" };
+        var exe = OperatingSystem.IsWindows() ? @"C:\scripts\notify.exe" : "/opt/scripts/notify";
+        var psi = ScriptRunner.StartInfo(new ScriptOptions { Path = exe, Arguments = "--msg {message} {ups}" }, m);
+        Assert.Equal(["--msg", "powerfailed \"quoted\" 100%", "Test UPS"], psi.ArgumentList);
+
+        if (OperatingSystem.IsWindows())
+        {
+            // cmd.exe can't escape quotes or percent signs reliably, so they're removed there.
+            var cmd = ScriptRunner.StartInfo(new ScriptOptions { Path = @"C:\scripts\notify.cmd", Arguments = "{message}" }, m);
+            Assert.EndsWith("\"powerfailed 'quoted' 100\"\"", cmd.Arguments);
+        }
+    }
+
+    [Fact]
     public void Arguments_split_like_a_shell()
     {
         Assert.Equal(["a", "b c", "", "d"], ScriptRunner.SplitArguments("a \"b c\" \"\"  d"));

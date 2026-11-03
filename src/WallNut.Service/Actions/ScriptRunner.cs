@@ -179,12 +179,18 @@ public sealed class ScriptRunner(
         return psi;
     }
 
-    /// <summary>Replaces {event}, {ups}, ... with the event's values.</summary>
+    /// <summary>
+    /// Replaces {event}, {ups}, ... with the event's values. Some values come from the NUT server
+    /// (status, messages), so they're cleaned first: no control characters (a line break could end a
+    /// command), and for cmd.exe no quotes or percent signs, which it can't escape reliably.
+    /// Each argument is still passed separately, never through a shell.
+    /// </summary>
     private static string Fill(string arg, IReadOnlyDictionary<string, string> fields, bool forCmd)
     {
         foreach (var (key, value) in fields)
         {
-            var v = forCmd ? value.Replace("\"", "'").Replace("%", "") : value; // can't be escaped safely for cmd.exe
+            var v = new string(value.Where(c => !char.IsControl(c)).ToArray());
+            if (forCmd) v = v.Replace("\"", "'").Replace("%", "");
             arg = arg.Replace("{" + key + "}", v, StringComparison.OrdinalIgnoreCase);
         }
         return arg;

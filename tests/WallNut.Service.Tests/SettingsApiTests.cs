@@ -224,4 +224,58 @@ public sealed class SettingsApiTests : IAsyncLifetime
         var unknownHost = await c.TestEndpointAsync(new EndpointConfig { Host = "no-such-nas.invalid", Ups = "ups" });
         Assert.Contains("couldn't find that host name", unknownHost.Message);
     }
+
+    /// <summary>A fake NUT server that says OK to everything and records what it was sent.</summary>
+    private static async Task<List<string>> CaptureLoginAsync(Func<int, Task> connect)
+    {
+        var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        var lines = new List<string>();
+        var serve = Task.Run(async () =>
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            var stream = client.GetStream();
+            using var reader = new StreamReader(stream);
+            await using var writer = new StreamWriter(stream) { NewLine = "\n", AutoFlush = true };
+            try
+            {
+                while (await reader.ReadLineAsync() is { } line)
+                {
+                    lock (lines) lines.Add(line);
+                    await writer.WriteLineAsync(line.StartsWith("LIST", StringComparison.Ordinal) ? "ERR UNKNOWN-COMMAND" : "OK");
+                }
+            }
+            catch (IOException) { }
+        });
+        try { await connect(port); }
+        finally { listener.Stop(); }
+        await Task.WhenAny(serve, Task.Delay(5000));
+        lock (lines) return lines.ToList();
+    }
+
+    [Fact]
+    public async Task Saved_password_is_never_sent_to_a_different_server()
+    {
+        var (c, _) = await Start(admin: false);
+        // An ordinary user names the saved UPS but points the test at a server they control.
+        var sent = await CaptureLoginAsync(port => c.TestEndpointAsync(new EndpointConfig
+        {
+            Id = "office", Host = "127.0.0.1", Port = port, Ups = "ups", Username = "monuser", Role = "PowersThisMachine",
+        }));
+        Assert.Contains(sent, l => l.StartsWith("USERNAME", StringComparison.Ordinal)); // it did try to log in
+        Assert.DoesNotContain(sent, l => l.Contains("secret", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Administrators_may_test_a_saved_password_against_a_new_address()
+    {
+        // e.g. the NAS moved to a new IP and the admin is checking it before saving.
+        var (c, _) = await Start(admin: true);
+        var sent = await CaptureLoginAsync(port => c.TestEndpointAsync(new EndpointConfig
+        {
+            Id = "office", Host = "127.0.0.1", Port = port, Ups = "ups", Username = "monuser", Role = "PowersThisMachine",
+        }));
+        Assert.Contains(sent, l => l.Contains("secret", StringComparison.Ordinal));
+    }
 }

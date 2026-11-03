@@ -113,17 +113,29 @@ public static class SettingsApi
             return Results.NoContent();
         });
 
-        // Trying a connection is harmless (it only reads), so anyone may do it.
-        api.MapPost("/config/test-endpoint", async (EndpointConfig body, IOptionsMonitor<WallNutOptions> options,
-            MachineConfigStatus file, CancellationToken ct) =>
+        // Trying a connection only reads, so anyone may do it with a password they type in.
+        // Leaving the password blank on a saved UPS uses the saved one, but only for the server it
+        // was saved for: otherwise an ordinary user could point the test at their own machine and
+        // collect a password they aren't allowed to read. (Administrators can read the file anyway.)
+        api.MapPost("/config/test-endpoint", async (EndpointConfig body, HttpContext http, ICallerIdentity callers,
+            IOptionsMonitor<WallNutOptions> options, MachineConfigStatus file, CancellationToken ct) =>
         {
             var password = body.Password;
-            if (password is null && !string.IsNullOrEmpty(body.Id) && !string.IsNullOrEmpty(body.Username))
-                password = (file.Path is { } p ? new MachineConfigWriter(p).StoredPassword(body.Id) : null)
-                           ?? options.CurrentValue.Endpoints.GetValueOrDefault(body.Id)?.Password;
+            if (password is null && !string.IsNullOrEmpty(body.Id) && !string.IsNullOrEmpty(body.Username)
+                && options.CurrentValue.Endpoints.GetValueOrDefault(body.Id) is { } saved
+                && (SameServer(saved, body) || callers.Get(http).IsAdmin))
+            {
+                password = (file.Path is { } p ? new MachineConfigWriter(p).StoredPassword(body.Id) : null) ?? saved.Password;
+            }
             return await TestAsync(body, password, ct);
         });
     }
+
+    /// <summary>The test goes to the same server, port and account the UPS was saved with.</summary>
+    private static bool SameServer(EndpointOptions saved, EndpointConfig test) =>
+        string.Equals(saved.Host?.Trim(), test.Host?.Trim(), StringComparison.OrdinalIgnoreCase)
+        && saved.Port == test.Port
+        && string.Equals(saved.Username, test.Username, StringComparison.Ordinal);
 
     // ---- Testing a connection ------------------------------------------------------------
 

@@ -31,6 +31,9 @@ done
 step() { printf '\n==> %s\n' "$1"; }
 [[ $EUID -eq 0 ]] || { echo "Please run with sudo." >&2; exit 1; }
 command -v systemctl >/dev/null || { echo "This installer needs systemd." >&2; exit 1; }
+if { command -v dpkg >/dev/null && dpkg -s wallnut >/dev/null 2>&1; } || { command -v rpm >/dev/null && rpm -q wallnut >/dev/null 2>&1; }; then
+  echo "WALLNut is installed as a package here. Upgrade it with apt or dnf instead of this script." >&2; exit 1
+fi
 
 case "$(uname -m)" in
   x86_64) RID=linux-x64 ;; aarch64|arm64) RID=linux-arm64 ;; armv7l) RID=linux-arm ;;

@@ -64,6 +64,8 @@ Type: files; Name: "{app}\install.log"
 [Run]
 Filename: "{app}\Tray\WALLNut.exe"; Parameters: "--page=settings"; Description: "Open WALLNut to add your UPS"; \
   Flags: postinstall nowait skipifsilent runasoriginaluser
+; Silent installs (upgrades, IT tools) skip the page above, so start the tray app quietly instead.
+Filename: "{app}\Tray\WALLNut.exe"; Flags: nowait runasoriginaluser; Check: WizardSilent
 
 [UninstallRun]
 Filename: "powershell.exe"; \

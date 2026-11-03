@@ -48,3 +48,4 @@ jobs:
           bash -n packaging/linux/uninstall.sh
           bash -n packaging/macos/install.sh
           bash -n packaging/macos/uninstall.sh
+          sh -n packaging/linux/package-setup.sh

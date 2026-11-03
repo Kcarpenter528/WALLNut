@@ -5,7 +5,9 @@
 .DESCRIPTION
     Publishes the service and tray app (self-contained: no .NET needed to run them), then packages:
       win-*    WALLNut-<version>-<rid>-setup.exe (Inno Setup) and WALLNut-<version>-<rid>.zip
-      others   WALLNut-<version>-<rid>.tar.gz: extract, then  sudo ./install.sh
+      linux-*  WALLNut-<version>-<rid>.deb and .rpm (where dpkg-deb and rpmbuild are installed),
+               and WALLNut-<version>-<rid>.tar.gz for other distributions (sudo ./install.sh)
+      osx-*    WALLNut-<version>-<rid>.pkg (when run on a Mac) and the .tar.gz
     Everything lands in dist/. Build each platform on its own OS (CI does) so file permissions
     and native parts are right.
 
@@ -19,7 +21,7 @@ param(
     [string]$Rid,
     [string]$Version = '0.1.0',
     [string]$Out = (Join-Path $PSScriptRoot '..' 'dist'),
-    # Make only the .zip/.tar.gz (for example when Inno Setup isn't installed).
+    # Make only the .zip/.tar.gz: no setup.exe, .pkg, .deb or .rpm.
     [switch]$NoInstaller
 )
 
@@ -58,7 +60,8 @@ if ($windows) {
     Copy-Item (Join-Path $repo 'packaging' 'windows' 'install.ps1'), (Join-Path $repo 'packaging' 'windows' 'uninstall.ps1') $stage
 } else {
     $os = $Rid.StartsWith('osx-') ? 'macos' : 'linux'
-    Get-ChildItem (Join-Path $repo 'packaging' $os) | Copy-Item -Destination $stage
+    # Everything a manual install needs (the package-only files stay out).
+    Get-ChildItem (Join-Path $repo 'packaging' $os) -Exclude 'package-setup.sh', 'distribution.xml' | Copy-Item -Destination $stage
     Copy-Item (Join-Path $repo 'src' 'WallNut.App' 'Assets' 'wallnut.png') $stage
 }
 @"
@@ -68,7 +71,10 @@ A wall of data for all of your NUTs: UPS monitoring, alerts and safe shutdown.
 Install
 $(if ($windows) { "  Easiest: run WALLNut-$Version-$Rid-setup.exe instead of this zip.
   Or, from an administrator PowerShell in this folder:  .\install.ps1" }
-  else { "  In a terminal in this folder:  sudo ./install.sh" })
+  elseif ($Rid.StartsWith('osx-')) { "  Easiest: open WALLNut-$Version-$Rid.pkg instead of this download.
+  Or, in a terminal in this folder:  sudo ./install.sh" }
+  else { "  Easiest: install the .deb (Debian, Ubuntu, Raspberry Pi OS) or .rpm (Fedora, RHEL).
+  Or, in a terminal in this folder:  sudo ./install.sh" })
 
 Then open WALLNut and add your UPS under Settings > UPS connections.
 Shutdowns start in TEST MODE: nothing is shut down until you turn it off in Settings > Shutdown.
@@ -101,6 +107,11 @@ if ($windows) {
     }
     & tar -czf (Join-Path $Out "$name.tar.gz") -C $work $name
     if ($LASTEXITCODE) { throw 'tar failed.' }
+
+    if (-not $NoInstaller) {
+        . (Join-Path $PSScriptRoot 'build-packages.ps1')
+        if ($Rid.StartsWith('linux-')) { New-LinuxPackages } else { New-MacPackage }
+    }
 }
 
 Step 'Done'

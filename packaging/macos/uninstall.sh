@@ -10,6 +10,7 @@ console_user="$(stat -f %Su /dev/console)"
 pkill -x WALLNut 2>/dev/null || true
 rm -f /Library/LaunchDaemons/wallnut.service.plist /Library/LaunchAgents/wallnut.tray.plist
 rm -rf /usr/local/wallnut /var/run/wallnut
+pkgutil --forget io.github.kcarpenter528.wallnut >/dev/null 2>&1 || true   # installed from the .pkg
 
 if [[ "${1:-}" == "--remove-settings" ]]; then rm -rf "/Library/Application Support/WALLNut"; echo "Settings removed."
 else echo "Kept your settings in /Library/Application Support/WALLNut (use --remove-settings to delete them)."; fi

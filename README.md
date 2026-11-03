@@ -38,66 +38,96 @@ It runs on Windows, macOS and Linux, and it's free and open source under the [GP
 
 Get the latest release for your system:
 
-| System | Download | Notes |
+| System | Installer | Other formats |
 |---|---|---|
-| Windows 10 or 11 (64-bit) | [WALLNut-win-x64-setup.exe](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-win-x64-setup.exe) | Standard installer |
-| macOS, Apple silicon (M1 and later) | [WALLNut-osx-arm64.tar.gz](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-osx-arm64.tar.gz) | |
-| macOS, Intel | [WALLNut-osx-x64.tar.gz](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-osx-x64.tar.gz) | |
-| Linux, 64-bit PC | [WALLNut-linux-x64.tar.gz](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-linux-x64.tar.gz) | Needs systemd |
-| Linux, ARM 64-bit | [WALLNut-linux-arm64.tar.gz](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-linux-arm64.tar.gz) | Raspberry Pi 4 and 5 (64-bit OS) |
+| Windows 10 or 11 (64-bit) | [WALLNut-win-x64-setup.exe](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-win-x64-setup.exe) | [.zip](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-win-x64.zip) |
+| macOS, Apple silicon (M1 and later) | [WALLNut-osx-arm64.pkg](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-osx-arm64.pkg) | [.tar.gz](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-osx-arm64.tar.gz) |
+| macOS, Intel | [WALLNut-osx-x64.pkg](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-osx-x64.pkg) | [.tar.gz](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-osx-x64.tar.gz) |
+| Debian, Ubuntu, Linux Mint (64-bit PC) | [WALLNut-linux-x64.deb](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-linux-x64.deb) | [.tar.gz](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-linux-x64.tar.gz) |
+| Fedora, RHEL, Rocky, AlmaLinux (64-bit PC) | [WALLNut-linux-x64.rpm](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-linux-x64.rpm) | |
+| Raspberry Pi OS and other ARM64 Debian/Ubuntu | [WALLNut-linux-arm64.deb](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-linux-arm64.deb) | [.tar.gz](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-linux-arm64.tar.gz) |
+| Fedora and RHEL on ARM64 | [WALLNut-linux-arm64.rpm](https://github.com/Kcarpenter528/WALLNut/releases/latest/download/WALLNut-linux-arm64.rpm) | |
 
-Older versions, release notes and checksums (`SHA256SUMS.txt`) are on the [Releases page](https://github.com/Kcarpenter528/WALLNut/releases).
+Not sure which Mac you have? Open the Apple menu > **About This Mac**. If **Chip** says Apple M1, M2, M3 or later, use Apple silicon. If it says **Processor** with an Intel name, use Intel. On a Raspberry Pi, you need a 64-bit OS (`uname -m` prints `aarch64`).
 
-You don't need to install .NET or anything else first. Each download includes everything it needs.
+The **.tar.gz** downloads work on any Linux with systemd, and on macOS if you'd rather install from Terminal (see [Installing from the .tar.gz](#installing-from-the-targz)). The Windows **.zip** contains the same files as the setup program, for scripted installs.
 
-**Want the newest code before it's released?** Every change is built automatically. Open the [Release workflow runs](https://github.com/Kcarpenter528/WALLNut/actions/workflows/release.yml), pick the most recent green run, and download your platform from **Artifacts** at the bottom of the page. You need to be signed in to GitHub to download artifacts, and they're deleted after 90 days.
+Older versions, release notes and checksums (`SHA256SUMS.txt`) are on the [Releases page](https://github.com/Kcarpenter528/WALLNut/releases). You don't need to install .NET or anything else first; each download includes everything it needs.
+
+**Want the newest code before it's released?** Every change is built automatically. Open the [Release workflow runs](https://github.com/Kcarpenter528/WALLNut/actions/workflows/release.yml), pick the most recent green run, and scroll down to **Artifacts**. Each download is listed by name, such as `WALLNut-osx-arm64.pkg`. GitHub wraps each one in a .zip, so unzip it first. You have to be signed in to GitHub to download artifacts, and they're deleted after 90 days.
 
 ## Install
 
-Installing again over an existing copy upgrades it and keeps your settings.
+Installing a newer version over an existing one upgrades it and keeps your settings.
+
+Every installer sets up the same two parts:
+
+- **The WALLNut service**, which does the monitoring and shutdowns. It starts with the computer and runs whether or not anyone is signed in.
+- **The WALLNut app**, which sits in the system tray (menu bar on a Mac) for every user and shows notifications.
 
 ### Windows
 
 1. Run **WALLNut-win-x64-setup.exe** and approve the administrator prompt.
 2. Click through the installer. At the end, leave **Open WALLNut to add your UPS** checked.
 
-The installer sets up two things:
-
-- **The WALLNut service**, which does the monitoring and shutdowns. It starts with Windows and runs whether or not anyone is signed in.
-- **The WALLNut app**, which sits in the notification area (system tray) for every user and shows the notifications.
-
 > [!TIP]
-> If Windows SmartScreen says "Windows protected your PC", click **More info** > **Run anyway**. The installer isn't code-signed yet, so new versions get this warning until enough people have downloaded them.
+> If Windows SmartScreen says "Windows protected your PC", click **More info** > **Run anyway**. The installer isn't code-signed yet, so new versions show this warning until enough people have downloaded them.
+
+For unattended installs, run `WALLNut-win-x64-setup.exe /VERYSILENT /SUPPRESSMSGBOXES`.
 
 ### macOS
 
-Open Terminal in the folder where you downloaded the file, then run:
+1. Double-click **WALLNut-osx-arm64.pkg** (or **WALLNut-osx-x64.pkg** on an Intel Mac).
+2. Follow the installer and enter your Mac password when asked.
 
-```bash
-tar -xzf WALLNut-osx-arm64.tar.gz      # or WALLNut-osx-x64.tar.gz on an Intel Mac
-cd WALLNut-*-osx-arm64
-sudo ./install.sh
-```
-
-The script installs to `/usr/local/wallnut`, starts the service, and sets the menu bar app to open at login.
+The menu bar app opens when the installer finishes, and again each time you log in.
 
 > [!NOTE]
-> The macOS builds aren't signed by Apple yet. `install.sh` clears the "downloaded from the internet" flag on the files it installs, so macOS won't block them.
+> The installer isn't signed by Apple yet, so macOS blocks it the first time with a message like "Apple could not verify WALLNut is free of malware". To open it anyway:
+>
+> - **macOS 15 Sequoia and later:** click **Done**, open **System Settings** > **Privacy & Security**, scroll down to the message about WALLNut, and click **Open Anyway**.
+> - **macOS 14 Sonoma and earlier:** Control-click the .pkg file, choose **Open**, then click **Open** again.
 
-### Linux
+If something goes wrong during the install, the details are in `/Library/Logs/WALLNut/install.log`.
+
+### Debian, Ubuntu and Raspberry Pi OS
+
+Download the .deb, then install it with `apt` so any missing system libraries are installed too:
 
 ```bash
-tar -xzf WALLNut-linux-x64.tar.gz      # or WALLNut-linux-arm64.tar.gz
+sudo apt install ./WALLNut-linux-x64.deb       # or WALLNut-linux-arm64.deb on a Raspberry Pi
+```
+
+To upgrade, download the new .deb and run the same command.
+
+On a server with no desktop, add `--no-install-recommends` to skip the libraries only the tray app needs.
+
+### Fedora, RHEL, Rocky Linux and AlmaLinux
+
+```bash
+sudo dnf install ./WALLNut-linux-x64.rpm       # or WALLNut-linux-arm64.rpm
+```
+
+To upgrade, download the new .rpm and run `sudo dnf upgrade ./WALLNut-linux-x64.rpm`.
+
+After installing on Linux, open **WALLNut** from your applications menu. It also starts automatically the next time you log in.
+
+> [!NOTE]
+> On GNOME, tray icons only appear if you install the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/). KDE, Cinnamon, XFCE and most other desktops show them without it.
+
+On a server with no desktop, the service works the same; you set it up by editing the settings file (see [Where things are stored](#where-things-are-stored)).
+
+### Installing from the .tar.gz
+
+Use the .tar.gz on Linux distributions without apt or dnf, or on a Mac if you prefer Terminal. Extract it, then run the install script:
+
+```bash
+tar -xzf WALLNut-linux-x64.tar.gz
 cd WALLNut-*-linux-x64
-sudo ./install.sh
+sudo ./install.sh                # add --no-tray on a server with no desktop
 ```
 
-The script installs to `/opt/wallnut`, registers a systemd service called `wallnut`, and adds the tray app to every user's desktop autostart.
-
-> [!NOTE]
-> On GNOME, tray icons only appear if you have the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/) installed. KDE, Cinnamon, XFCE and most other desktops show them out of the box.
-
-On a headless server, such as a Pi with no desktop, install with `sudo ./install.sh --no-tray`. The service works the same; you configure it by editing the settings file (see [Where things are stored](#where-things-are-stored)).
+The same steps work for the macOS .tar.gz. On Linux the script installs to `/opt/wallnut` and registers a systemd service called `wallnut`. On macOS it installs to `/usr/local/wallnut`. Don't mix the two methods on one Linux machine: if WALLNut was installed from a .deb or .rpm, keep upgrading it that way.
 
 ## Connect your first UPS
 
@@ -375,11 +405,13 @@ sudo /opt/wallnut/service/WallNut.Service --check
 
 ## Uninstall
 
-- **Windows:** **Settings** > **Apps** > **WALLNut** > **Uninstall**. You're asked whether to keep your settings and history.
-- **macOS:** `sudo /usr/local/wallnut/uninstall.sh`
-- **Linux:** `sudo /opt/wallnut/uninstall.sh`
-
-On macOS and Linux your settings are kept. Add `--remove-settings` to delete them as well.
+| Installed with | To remove WALLNut | To also delete your settings and history |
+|---|---|---|
+| Windows setup | **Settings** > **Apps** > **WALLNut** > **Uninstall** | Answer **Yes** when you're asked |
+| macOS .pkg or .tar.gz | `sudo /usr/local/wallnut/uninstall.sh` | `sudo /usr/local/wallnut/uninstall.sh --remove-settings` |
+| .deb | `sudo apt remove wallnut` | `sudo apt purge wallnut` |
+| .rpm | `sudo dnf remove wallnut` | Then `sudo rm -rf /etc/wallnut /var/lib/wallnut` |
+| Linux .tar.gz | `sudo /opt/wallnut/uninstall.sh` | `sudo /opt/wallnut/uninstall.sh --remove-settings` |
 
 ## Where things are stored
 

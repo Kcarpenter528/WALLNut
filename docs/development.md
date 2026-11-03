@@ -7,6 +7,8 @@ This page covers building WALLNut from source, running it against the built-in U
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell), only for making release builds
 - [Inno Setup 6](https://jrsoftware.org/isinfo.php), only for making the Windows setup program (`winget install JRSoftware.InnoSetup`)
+- `dpkg-deb` and `rpmbuild` (`sudo apt install rpm` on Ubuntu), only for making the Linux packages
+- A Mac with the Xcode command line tools, only for making the macOS .pkg
 
 ## Build and test
 
@@ -97,18 +99,29 @@ sudo packaging/macos/install.sh --nas-host 192.168.1.10
 `packaging/build.ps1` publishes self-contained builds and packages them into `dist/`:
 
 ```powershell
-./packaging/build.ps1 -Rid win-x64 -Version 0.2.0       # setup.exe and .zip
-./packaging/build.ps1 -Rid linux-x64 -Version 0.2.0     # .tar.gz
+./packaging/build.ps1 -Rid win-x64 -Version 0.2.0       # setup.exe and .zip (on Windows)
+./packaging/build.ps1 -Rid linux-x64 -Version 0.2.0     # .deb, .rpm and .tar.gz (on Linux)
+./packaging/build.ps1 -Rid osx-arm64 -Version 0.2.0     # .pkg and .tar.gz (on a Mac)
 ```
 
-Supported runtimes are `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64`. Build each one on its own operating system so file permissions come out right. Add `-NoInstaller` to skip the Windows setup program.
+Supported runtimes are `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64`. Build each one on its own operating system so file permissions come out right. A package is skipped, with a message, when its tool isn't installed. Add `-NoInstaller` to make only the .zip or .tar.gz.
+
+How each installer works:
+
+| Installer | Made by | What it does after copying files |
+|---|---|---|
+| Windows setup.exe | Inno Setup, [wallnut.iss](../packaging/windows/wallnut.iss) | Runs `install.ps1 -InPlace` (logged to `install.log` in the program folder) |
+| macOS .pkg | `pkgbuild` and `productbuild` | Unpacks to a temporary folder and runs `install.sh` (logged to `/Library/Logs/WALLNut/install.log`) |
+| .deb and .rpm | `dpkg-deb` and `rpmbuild`, [build-packages.ps1](../packaging/build-packages.ps1) | Runs [package-setup.sh](../packaging/linux/package-setup.sh) `configure`, and `remove` before uninstalling |
 
 ## Continuous integration and releases
 
 - [ci.yml](../.github/workflows/ci.yml) builds and tests on Windows, Linux and macOS for every push and pull request.
 - [release.yml](../.github/workflows/release.yml) runs the tests, then builds all five downloads.
   - **Tag push (`v0.2.0`):** creates a **draft** GitHub release with the downloads and a `SHA256SUMS.txt`. Review it, then click **Publish**. Tags with a hyphen, like `v0.2.0-beta.1`, are marked as pre-releases.
-  - **Manual run (Actions > Release > Run workflow):** builds a test version you choose. The downloads are attached to the run as artifacts and no release is made.
+  - **Manual run (Actions > Release > Run workflow):** builds a test version you choose. Each download is attached to the run as its own artifact, named after the file, and no release is made.
+
+  Before uploading anything, the workflow installs and uninstalls each installer on GitHub's runners and checks the service starts: the setup.exe on Windows, the .deb on Ubuntu, the .rpm in a Fedora container, and the .pkg on an Apple silicon Mac. The ARM64 Linux packages and the Intel Mac .pkg are built but not test-installed.
 
 Release files are named without the version (for example `WALLNut-win-x64-setup.exe`), so the README's `releases/latest/download/...` links always point at the newest published release. Pre-releases and drafts aren't counted as "latest".
 

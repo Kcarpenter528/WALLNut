@@ -52,6 +52,9 @@ function New-DebPackage([string]$root) {
     New-Item -ItemType Directory -Force $debian | Out-Null
     $sizeKb = [math]::Ceiling(((Get-ChildItem $root -Recurse -File | Measure-Object Length -Sum).Sum) / 1KB)
     $longDescription = ($packageDescription.Trim() -split "`r?`n" | ForEach-Object { " $_" }) -join "`n"
+    # Each Debian/Ubuntu release has its own libicuNN package (Debian 10 has 63, Ubuntu 26.04 has 78),
+    # so accept any of them, with room for future releases (the same approach as .NET's own packages).
+    $icu = (90..63 | ForEach-Object { "libicu$_" }) -join ' | '
 
     # The programs are self-contained .NET, which still needs these system libraries.
     # The tray app's are only recommended, so a headless server can skip them.
@@ -61,7 +64,7 @@ Version: $(Get-PackageVersion)
 Architecture: $arch
 Maintainer: WALLNut contributors <373569+Kcarpenter528@users.noreply.github.com>
 Installed-Size: $sizeKb
-Depends: libc6, libgcc-s1 | libgcc1, libstdc++6, zlib1g, libssl3t64 | libssl3 | libssl1.1, libicu76 | libicu74 | libicu72 | libicu71 | libicu70 | libicu67 | libicu66 | libicu63
+Depends: libc6, libgcc-s1 | libgcc1, libstdc++6, zlib1g, libssl3t64 | libssl3 | libssl1.1, $icu
 Recommends: libx11-6, libice6, libsm6, libfontconfig1, libnotify-bin
 Section: admin
 Priority: optional

@@ -76,12 +76,17 @@ jobs:
         shell: pwsh
         run: |
           $setup = Get-ChildItem dist -Filter '*-setup.exe' | Select-Object -First 1
-          Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/LOG=setup.log' -Wait
+          # Wait for setup itself only: Start-Process -Wait would also wait for the tray app it starts.
+          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/LOG=setup.log' -PassThru
+          if (-not $p.WaitForExit(600000)) { throw 'Setup took more than 10 minutes.' }
           Get-Content "$env:ProgramFiles\WALLNut\install.log" -ErrorAction SilentlyContinue
+          if ($p.ExitCode) { Get-Content setup.log -Tail 40; throw "Setup failed ($($p.ExitCode))." }
           (Get-Service WALLNut).WaitForStatus('Running', '00:00:30')
           & "$env:ProgramFiles\WALLNut\Service\WallNut.Service.exe" --check
           if ($LASTEXITCODE) { throw "--check failed ($LASTEXITCODE)" }
-          Start-Process "$env:ProgramFiles\WALLNut\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES' -Wait
+          # The uninstaller hands off to a copy of itself and exits, so wait for the service to go.
+          Start-Process "$env:ProgramFiles\WALLNut\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES'
+          for ($i = 0; $i -lt 120 -and (Get-Service WALLNut -ErrorAction SilentlyContinue); $i++) { Start-Sleep 1 }
           if (Get-Service WALLNut -ErrorAction SilentlyContinue) { throw 'The service is still there after uninstalling.' }
 
       - name: Try the .deb

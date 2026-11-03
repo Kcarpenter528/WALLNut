@@ -38,7 +38,8 @@ internal sealed class FakeSmtpServer : IAsyncDisposable
         {
             TcpClient client;
             try { client = await _listener.AcceptTcpClientAsync(_stop.Token); }
-            catch (OperationCanceledException) { return; }
+            // Stopping the listener ends a pending accept with any of these, depending on timing.
+            catch (Exception e) when (e is OperationCanceledException or ObjectDisposedException or SocketException) { return; }
             _ = Task.Run(() => HandleAsync(client));
         }
     }
@@ -109,7 +110,7 @@ internal sealed class FakeSmtpServer : IAsyncDisposable
     {
         _stop.Cancel();
         _listener.Stop();
-        try { await _loop; } catch (OperationCanceledException) { }
+        await _loop;
     }
 }
 

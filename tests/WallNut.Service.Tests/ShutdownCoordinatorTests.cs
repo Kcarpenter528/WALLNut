@@ -195,6 +195,8 @@ public sealed class EndToEndShutdownTests : IAsyncLifetime
         await _sink.WaitFor(UpsEventKind.LowBattery);
         var e = await _sink.WaitFor(UpsEventKind.ShutdownInitiated);
         Assert.Contains("low battery", e.Message);
+        // The shutdown itself runs just after the announcement (once before-shutdown work is done).
+        for (var i = 0; i < 100 && _exec.Calls.IsEmpty; i++) await Task.Delay(50);
         Assert.Single(_exec.Calls);
     }
 

@@ -85,6 +85,17 @@ jobs:
           path: dist
           merge-multiple: true
 
+      # Release files drop the version (WALLNut-win-x64-setup.exe), so the README's
+      # .../releases/latest/download/<file> links always point at the newest release.
+      - name: Name the files for "latest" links
+        working-directory: dist
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          for f in WALLNut-*; do mv "$f" "${f/-$version/}"; done
+          ls -l
+
       - name: Checksums
         working-directory: dist
         run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt

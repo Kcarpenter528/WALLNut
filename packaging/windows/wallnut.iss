@@ -102,8 +102,12 @@ begin
   Params := '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\install.ps1') +
             '" -InPlace -InstallDir "' + ExpandConstant('{app}') + '"';
   if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), Params, '', SW_HIDE, ewWaitUntilTerminated, Code) or (Code <> 0) then
-    MsgBox('WALLNut was copied, but setting up the service didn''t finish (code ' + IntToStr(Code) + ').' + #13#10#13#10 +
-           'The details are in ' + ExpandConstant('{app}\install.log') + '.', mbError, MB_OK);
+  begin
+    Log('install.ps1 failed with code ' + IntToStr(Code) + '; see ' + ExpandConstant('{app}\install.log'));
+    // Suppressible, so a silent install (/SUPPRESSMSGBOXES) never sits waiting for a click.
+    SuppressibleMsgBox('WALLNut was copied, but setting up the service didn''t finish (code ' + IntToStr(Code) + ').' + #13#10#13#10 +
+           'The details are in ' + ExpandConstant('{app}\install.log') + '.', mbError, MB_OK, IDOK);
+  end;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);

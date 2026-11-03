@@ -12,6 +12,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# See install.ps1: keep Windows PowerShell from loading PowerShell 7's modules.
+if ($PSVersionTable.PSEdition -eq 'Desktop') {
+    $env:PSModulePath = ($env:PSModulePath -split ';' | Where-Object { $_ -and $_ -notmatch '\\PowerShell\\' }) -join ';'
+}
 $ServiceName = 'WALLNut'
 
 $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()

@@ -45,6 +45,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Started from PowerShell 7 (for example by setup run from a pwsh window), Windows PowerShell
+# inherits 7's module folders and then can't load its own Get-Acl. Use only its own modules.
+if ($PSVersionTable.PSEdition -eq 'Desktop') {
+    $env:PSModulePath = ($env:PSModulePath -split ';' | Where-Object { $_ -and $_ -notmatch '\\PowerShell\\' }) -join ';'
+}
 $ServiceName = 'WALLNut'
 $ConfigDir = Join-Path $env:ProgramData 'WALLNut'
 $ConfigFile = Join-Path $ConfigDir 'config.json'

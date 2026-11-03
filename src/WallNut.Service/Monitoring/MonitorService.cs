@@ -54,15 +54,14 @@ public sealed class MonitorService(
 
             var config = options.CurrentValue;
             var problems = config.Validate();
-            var fatal = problems.Where(p => !p.StartsWith("No UPS endpoints", StringComparison.Ordinal)).ToList();
-            if (fatal.Count > 0)
+            if (problems.Count > 0)
             {
-                foreach (var p in fatal) _log.LogError("Configuration problem: {Problem}", p);
+                foreach (var p in problems) _log.LogError("Configuration problem: {Problem}", p);
                 _log.LogError(reload ? "Settings change ignored; still monitoring with the previous settings."
                                      : "Not monitoring anything until the configuration is fixed.");
                 return;
             }
-            if (problems.Count > 0) _log.LogWarning("{Problem}", problems[0]);
+            if (config.HasNoUps) _log.LogWarning("{Note}", WallNutOptions.NoUpsNote);
 
             var wanted = config.Endpoints
                 .Where(e => e.Value.Enabled)

@@ -7,7 +7,8 @@
     C:\ProgramData\WALLNut\config.json are kept.
 
       - Builds self-contained copies of both programs (no .NET install needed to run them),
-        unless -SourceDir points at already-built ones.
+        unless -SourceDir points at already-built ones, or this script sits in a release bundle
+        (next to "service" and "tray" folders).
       - Installs to C:\Program Files\WALLNut.
       - Registers the "WALLNut" Windows service: runs as SYSTEM, starts at boot, restarts if it crashes.
       - Creates C:\ProgramData\WALLNut\config.json if it doesn't exist (administrators only).
@@ -36,17 +37,32 @@ param(
     [string]$Role = 'PowersThisMachine',
 
     [switch]$NoTray,
-    [switch]$NoStart
+    [switch]$NoStart,
+
+    # Used by the setup program: the files are already in -InstallDir, so only register and
+    # configure. Writes a log to install.log there and leaves starting the tray app to setup.
+    [switch]$InPlace
 )
 
 $ErrorActionPreference = 'Stop'
 $ServiceName = 'WALLNut'
 $ConfigDir = Join-Path $env:ProgramData 'WALLNut'
 $ConfigFile = Join-Path $ConfigDir 'config.json'
-$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
+$RepoRoot = Join-Path $PSScriptRoot '..\..'
+# config.example.json: next to this script in a bundle or install, in packaging\ in the repository.
+$ExampleConfig = @((Join-Path $PSScriptRoot 'config.example.json'), (Join-Path $RepoRoot 'packaging\config.example.json')) |
+    Where-Object { Test-Path $_ } | Select-Object -First 1
 
 function Step($text) { Write-Host "`n==> $text" -ForegroundColor Cyan }
 function Note($text) { Write-Host "    $text" }
+
+if ($InPlace) {
+    Start-Transcript -Path (Join-Path $InstallDir 'install.log') -Force | Out-Null
+    $SourceDir = $InstallDir
+}
+elseif (-not $SourceDir -and (Test-Path (Join-Path $PSScriptRoot 'service\WallNut.Service.exe'))) {
+    $SourceDir = $PSScriptRoot   # a release bundle: already built
+}
 
 # ---- Checks --------------------------------------------------------------------------
 $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
@@ -71,6 +87,7 @@ if (-not $SourceDir) {
 }
 $serviceSrc = Join-Path $SourceDir 'service'
 $traySrc = Join-Path $SourceDir 'tray'
+if ($InPlace) { $serviceSrc = Join-Path $InstallDir 'Service'; $traySrc = Join-Path $InstallDir 'Tray' }
 if (-not (Test-Path (Join-Path $serviceSrc 'WallNut.Service.exe'))) { throw "No WallNut.Service.exe in $serviceSrc." }
 
 # ---- Stop what's running (upgrade) ---------------------------------------------------
@@ -83,18 +100,21 @@ if ($existing -and $existing.Status -ne 'Stopped') {
 Get-Process -Name 'WALLNut' -ErrorAction SilentlyContinue | Stop-Process -Force
 
 # ---- Copy files ----------------------------------------------------------------------
-Step "Installing to $InstallDir"
 $serviceDir = Join-Path $InstallDir 'Service'
 $trayDir = Join-Path $InstallDir 'Tray'
+if (-not $InPlace) { Step "Installing to $InstallDir" }
 foreach ($pair in @(@($serviceSrc, $serviceDir), @($traySrc, $trayDir))) {
+    if ($InPlace) { break }
     if (-not (Test-Path $pair[0])) { continue }
     New-Item -ItemType Directory -Force $pair[1] | Out-Null
     # Mirror, so files removed in a new version don't linger.
     & robocopy $pair[0] $pair[1] /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "Copying files to $($pair[1]) failed (robocopy $LASTEXITCODE)." }
 }
-Copy-Item (Join-Path $RepoRoot 'packaging\config.example.json') (Join-Path $InstallDir 'config.example.json') -Force
-Copy-Item (Join-Path $PSScriptRoot 'uninstall.ps1') (Join-Path $InstallDir 'uninstall.ps1') -Force
+if (-not $InPlace) {
+    Copy-Item $ExampleConfig (Join-Path $InstallDir 'config.example.json') -Force
+    Copy-Item (Join-Path $PSScriptRoot 'uninstall.ps1') (Join-Path $InstallDir 'uninstall.ps1') -Force
+}
 $serviceExe = Join-Path $serviceDir 'WallNut.Service.exe'
 $trayExe = Join-Path $trayDir 'WALLNut.exe'
 
@@ -120,8 +140,17 @@ if (Test-Path $ConfigFile) {
     $config | ConvertTo-Json -Depth 6 | Set-Content -Path $ConfigFile -Encoding utf8
     Note "Created, watching $UpsName@$NasHost ($Role). Shutdown is in TEST MODE."
 } else {
-    Copy-Item (Join-Path $RepoRoot 'packaging\config.example.json') $ConfigFile
-    Note 'Created from the example. Edit the Host line, then restart the service.'
+    @'
+{
+  // WALLNut settings. Add your UPS in the WALLNut app (Settings > UPS connections).
+  // Every option is described in config.example.json in the program folder.
+  "WallNut": {
+    "Endpoints": {},
+    "Shutdown": { "DryRun": true }
+  }
+}
+'@ | Set-Content -Path $ConfigFile -Encoding utf8
+    Note 'Created. Add your UPS in the WALLNut app: Settings > UPS connections.'
 }
 # Administrators and SYSTEM only: the file can hold passwords. (SIDs, so it works in any language.)
 # 1. The folder gets exactly these two entries, marked to pass down to everything inside it.
@@ -181,14 +210,15 @@ if (-not $NoTray -and (Test-Path $trayExe)) {
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($lnk)
     $shortcut.TargetPath = $trayExe
-    $shortcut.Arguments = '--settings'
+    $shortcut.Arguments = '--open'
     $shortcut.WorkingDirectory = $trayDir
     $shortcut.Description = 'WALLNut UPS monitor'
     $shortcut.Save()
     Note 'Start menu shortcut: WALLNut.'
 
     # Start it now for you, as you rather than as administrator (explorer launches it un-elevated).
-    if (-not $NoStart) { Start-Process -FilePath 'explorer.exe' -ArgumentList "`"$trayExe`"" }
+    # The setup program starts it itself (as the user who ran setup).
+    if (-not $NoStart -and -not $InPlace) { Start-Process -FilePath 'explorer.exe' -ArgumentList "`"$trayExe`"" }
 }
 
 # ---- Done ----------------------------------------------------------------------------

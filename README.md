@@ -7,6 +7,8 @@ WALLNut is a cross-platform (Windows, macOS, Linux) monitor for UPS devices serv
 
 > Status: early development. Not related to the GNOME Shell extension "walNUT".
 
+License: [GPL-3.0-or-later](LICENSE).
+
 ## Planned features
 
 - Monitor several NUT servers and UPS devices at once, each on its own connection
@@ -30,20 +32,41 @@ WALLNut is a cross-platform (Windows, macOS, Linux) monitor for UPS devices serv
 
 ## Install
 
-The installers build self-contained copies (the target machine doesn't need .NET), install the
-service to start at boot and restart if it crashes, run a settings check, and start the tray app
-at login for every user. Running them again upgrades in place and keeps your settings.
+Download from the [Releases](https://github.com/Kcarpenter528/WALLNut/releases) page. Every
+download is self-contained (no .NET needed), installs the service to start at boot and restart if
+it crashes, and starts the tray app at login for every user. Installing again upgrades in place and
+keeps your settings. Then open WALLNut and add your UPS under **Settings > UPS connections**.
 
-| OS | Install | Settings | Logs |
-|---|---|---|---|
-| Windows | `packaging\windows\install.ps1 -NasHost 192.168.1.10` (admin PowerShell) | `C:\ProgramData\WALLNut\config.json` | Event Viewer > Application, source `WALLNut` |
-| Linux (systemd) | `sudo packaging/linux/install.sh --nas-host 192.168.1.10` | `/etc/wallnut/config.json` | `journalctl -u wallnut -f` |
-| macOS | `sudo packaging/macos/install.sh --nas-host 192.168.1.10` | `/Library/Application Support/WALLNut/config.json` | `/Library/Logs/WALLNut/service.log` |
+| OS | Download | Install | Settings | Logs |
+|---|---|---|---|---|
+| Windows 10/11 | `WALLNut-<version>-win-x64-setup.exe` | Run it | `C:\ProgramData\WALLNut\config.json` | Event Viewer > Application, source `WALLNut` |
+| Linux (systemd) | `WALLNut-<version>-linux-x64.tar.gz` or `-linux-arm64` (Raspberry Pi 4/5) | Extract, then `sudo ./install.sh` | `/etc/wallnut/config.json` | `journalctl -u wallnut -f` |
+| macOS | `WALLNut-<version>-osx-arm64.tar.gz` (Apple silicon) or `-osx-x64` (Intel) | Extract, then `sudo ./install.sh` | `/Library/Application Support/WALLNut/config.json` | `/Library/Logs/WALLNut/service.log` |
 
 Settings files are readable by administrators only (they can hold passwords). See
 [packaging/config.example.json](packaging/config.example.json) for every option, and check them any
-time with `WallNut.Service --check`. Shutdown starts in **test mode**; turn it off with
-`"DryRun": false` once you've rehearsed an outage.
+time with `WallNut.Service --check`. Shutdown starts in **test mode**; turn it off in
+Settings > Shutdown once you've rehearsed an outage.
+
+The macOS downloads aren't signed by Apple yet; `install.sh` clears the download quarantine.
+
+### From source
+
+The same scripts build from a clone (needs the .NET 10 SDK) and can set up the first UPS:
+
+| OS | Command |
+|---|---|
+| Windows | `packaging\windows\install.ps1 -NasHost 192.168.1.10` (admin PowerShell) |
+| Linux | `sudo packaging/linux/install.sh --nas-host 192.168.1.10` |
+| macOS | `sudo packaging/macos/install.sh --nas-host 192.168.1.10` |
+
+### Making the downloads
+
+`packaging/build.ps1 -Rid <win-x64|linux-x64|linux-arm64|osx-x64|osx-arm64> -Version 1.2.3`
+(PowerShell 7) writes them to `dist/`. The Windows setup program needs
+[Inno Setup 6](https://jrsoftware.org/isinfo.php). GitHub Actions runs the tests on Windows, Linux
+and macOS for every push ([ci.yml](.github/workflows/ci.yml)); pushing a tag such as `v0.2.0`
+builds every download and drafts a release with them ([release.yml](.github/workflows/release.yml)).
 
 ## Try it with the simulator
 

@@ -122,12 +122,17 @@ public sealed class WallNutOptions
     /// <summary>Alerts and actions (phone alerts, webhooks, scripts, email), keyed by a short id.</summary>
     public Dictionary<string, ActionOptions> Actions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>True when there's nothing to monitor yet.</summary>
+    public bool HasNoUps => !Endpoints.Any(e => e.Value.Enabled);
+
+    public const string NoUpsNote = "No UPS is set up yet. Add one in the WALLNut app (Settings > UPS connections).";
+
     /// <summary>Problems that would stop monitoring from working, in plain words. Empty when valid.</summary>
     public IReadOnlyList<string> Validate()
     {
         var problems = new List<string>();
+        // No UPS at all is fine (a fresh install adds them in the app); see HasNoUps.
         var enabled = Endpoints.Where(e => e.Value.Enabled).ToList();
-        if (enabled.Count == 0) problems.Add("No UPS endpoints are configured. Add one under WallNut:Endpoints.");
 
         foreach (var (id, e) in enabled)
         {

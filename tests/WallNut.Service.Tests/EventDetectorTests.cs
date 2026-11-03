@@ -85,7 +85,12 @@ public class OptionsTests
     }
 
     [Fact]
-    public void Nothing_configured_is_a_problem() => Assert.Single(new WallNutOptions().Validate());
+    public void Nothing_configured_is_allowed_but_noted()
+    {
+        var o = new WallNutOptions();
+        Assert.Empty(o.Validate()); // a fresh install adds its UPS in the app
+        Assert.True(o.HasNoUps);
+    }
 
     [Fact]
     public void Disabled_endpoints_are_ignored()

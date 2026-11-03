@@ -122,9 +122,20 @@ public sealed class InstallConfigTests : IAsyncLifetime
     [Fact]
     public async Task Check_reports_settings_problems()
     {
+        var path = Config("""{ "WallNut": { "Endpoints": { "nas": { "Host": "", "Ups": "ups" } } } }""");
         var output = new StringWriter();
-        Assert.Equal(1, await ConfigCheck.RunAsync(Build("none"), output));
-        Assert.Contains("No UPS endpoints are configured", output.ToString());
+        Assert.Equal(1, await ConfigCheck.RunAsync(Build(path), output));
+        Assert.Contains("Host is required", output.ToString());
+    }
+
+    [Fact]
+    public async Task Fresh_install_without_a_ups_is_fine()
+    {
+        // What the installers write: the UPS is added later in the app.
+        var path = Config("""{ "WallNut": { "Endpoints": {}, "Shutdown": { "DryRun": true } } }""");
+        var output = new StringWriter();
+        Assert.Equal(0, await ConfigCheck.RunAsync(Build(path), output));
+        Assert.Contains("No UPS is set up yet", output.ToString());
     }
 
     [Fact]

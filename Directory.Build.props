@@ -6,5 +6,9 @@
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Product>WALLNut</Product>
+    <!-- Release builds pass -p:Version=1.2.3 (from the git tag). -->
+    <Version>0.1.0</Version>
+    <Authors>WALLNut contributors</Authors>
+    <Copyright>WALLNut contributors. GPL-3.0-or-later.</Copyright>
   </PropertyGroup>
 </Project>

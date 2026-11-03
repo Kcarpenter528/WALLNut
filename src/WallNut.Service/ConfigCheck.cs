@@ -29,6 +29,7 @@ public static class ConfigCheck
             foreach (var p in problems) output.WriteLine($"  PROBLEM: {p}");
             return 1;
         }
+        if (o.HasNoUps) output.WriteLine($"  NOTE: {WallNutOptions.NoUpsNote}");
 
         var failed = 0;
         foreach (var (id, e) in o.Endpoints.Where(e => e.Value.Enabled))

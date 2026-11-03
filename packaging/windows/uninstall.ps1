@@ -6,7 +6,9 @@
 [CmdletBinding()]
 param(
     [string]$InstallDir = (Join-Path $env:ProgramFiles 'WALLNut'),
-    [switch]$RemoveSettings
+    [switch]$RemoveSettings,
+    # Used by the setup program's uninstaller, which removes the files itself.
+    [switch]$KeepFiles
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,7 +31,7 @@ Remove-ItemProperty -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Run' 
 Remove-Item (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\WALLNut.lnk') -ErrorAction SilentlyContinue
 
 # This script may be running from the install folder; remove it after we exit.
-if (Test-Path $InstallDir) {
+if (-not $KeepFiles -and (Test-Path $InstallDir)) {
     Write-Host "Removing $InstallDir..."
     Get-ChildItem $InstallDir -Exclude 'uninstall.ps1' | Remove-Item -Recurse -Force
     Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', "timeout /t 2 >nul & rmdir /s /q `"$InstallDir`"" -WindowStyle Hidden

@@ -11,6 +11,9 @@ DAEMON=/Library/LaunchDaemons/wallnut.service.plist
 AGENT=/Library/LaunchAgents/wallnut.tray.plist
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
+# In a release download the files sit next to this script; in the repository they're elsewhere.
+pick() { for f in "$@"; do [[ -e "$f" ]] && { echo "$f"; return; }; done; echo "$1"; }
+EXAMPLE_CONFIG="$(pick "$HERE/config.example.json" "$REPO_ROOT/packaging/config.example.json")"
 SOURCE_DIR="" NAS_HOST="" NO_TRAY=0 UPS_NAME=ups USERNAME=monuser PASSWORD=secret ROLE=PowersThisMachine
 
 while [[ $# -gt 0 ]]; do
@@ -31,6 +34,7 @@ step() { printf '\n==> %s\n' "$1"; }
 [[ $EUID -eq 0 ]] || { echo "Please run with sudo." >&2; exit 1; }
 case "$(uname -m)" in arm64) RID=osx-arm64 ;; x86_64) RID=osx-x64 ;; *) echo "Unsupported CPU" >&2; exit 1 ;; esac
 
+if [[ -z "$SOURCE_DIR" && -x "$HERE/service/WallNut.Service" ]]; then SOURCE_DIR="$HERE"; fi  # release download
 if [[ -z "$SOURCE_DIR" ]]; then
   step "Building WALLNut ($RID, self-contained)"
   command -v dotnet >/dev/null || { echo "The .NET SDK is needed to build (or pass --source-dir)." >&2; exit 1; }
@@ -48,9 +52,10 @@ step "Installing to $INSTALL_DIR"
 mkdir -p "$INSTALL_DIR" /Library/Logs/WALLNut
 rm -rf "$INSTALL_DIR/service"; cp -R "$SOURCE_DIR/service" "$INSTALL_DIR/service"
 [[ $NO_TRAY -eq 0 && -d "$SOURCE_DIR/tray" ]] && { rm -rf "$INSTALL_DIR/tray"; cp -R "$SOURCE_DIR/tray" "$INSTALL_DIR/tray"; }
-cp "$REPO_ROOT/packaging/config.example.json" "$INSTALL_DIR/config.example.json"
+chmod 755 "$INSTALL_DIR/service/WallNut.Service"; [[ -f "$INSTALL_DIR/tray/WALLNut" ]] && chmod 755 "$INSTALL_DIR/tray/WALLNut"
+cp "$EXAMPLE_CONFIG" "$INSTALL_DIR/config.example.json"
 cp "$HERE/uninstall.sh" "$INSTALL_DIR/uninstall.sh"; chmod 755 "$INSTALL_DIR/uninstall.sh"
-# Downloaded/unsigned builds are quarantined by Gatekeeper; these are built locally.
+# Downloaded builds are quarantined by Gatekeeper (they aren't signed by Apple yet); the user chose to install them.
 xattr -dr com.apple.quarantine "$INSTALL_DIR" 2>/dev/null || true
 
 step "Settings: $CONFIG_FILE"
@@ -72,8 +77,17 @@ elif [[ -n "$NAS_HOST" ]]; then
 EOF
   echo "    Created, watching $UPS_NAME@$NAS_HOST ($ROLE). Shutdown is in TEST MODE."
 else
-  cp "$REPO_ROOT/packaging/config.example.json" "$CONFIG_FILE"
-  echo "    Created from the example. Edit the Host line, then reinstall or: sudo launchctl kickstart -k system/wallnut.service"
+  cat > "$CONFIG_FILE" <<'EOF'
+{
+  // WALLNut settings. Add your UPS in the WALLNut app (Settings > UPS connections).
+  // Every option is described in config.example.json in the program folder.
+  "WallNut": {
+    "Endpoints": {},
+    "Shutdown": { "DryRun": true }
+  }
+}
+EOF
+  echo "    Created. Add your UPS in the WALLNut app: Settings > UPS connections."
 fi
 chown -R root:wheel "$CONFIG_DIR"; chmod 700 "$CONFIG_DIR"; chmod 600 "$CONFIG_FILE"  # may hold passwords
 

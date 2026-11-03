@@ -9,6 +9,9 @@ CONFIG_DIR=/etc/wallnut
 CONFIG_FILE=$CONFIG_DIR/config.json
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
+# In a release download the files sit next to this script; in the repository they're elsewhere.
+pick() { for f in "$@"; do [[ -e "$f" ]] && { echo "$f"; return; }; done; echo "$1"; }
+EXAMPLE_CONFIG="$(pick "$HERE/config.example.json" "$REPO_ROOT/packaging/config.example.json")"
 SOURCE_DIR="" NAS_HOST="" NO_TRAY=0 UPS_NAME=ups USERNAME=monuser PASSWORD=secret ROLE=PowersThisMachine
 
 while [[ $# -gt 0 ]]; do
@@ -34,6 +37,7 @@ case "$(uname -m)" in
   *) echo "Unsupported CPU $(uname -m)" >&2; exit 1 ;;
 esac
 
+if [[ -z "$SOURCE_DIR" && -x "$HERE/service/WallNut.Service" ]]; then SOURCE_DIR="$HERE"; fi  # release download
 if [[ -z "$SOURCE_DIR" ]]; then
   step "Building WALLNut ($RID, self-contained)"
   command -v dotnet >/dev/null || { echo "The .NET SDK is needed to build (or pass --source-dir)." >&2; exit 1; }
@@ -51,9 +55,11 @@ mkdir -p "$INSTALL_DIR"
 rm -rf "$INSTALL_DIR/service"; cp -r "$SOURCE_DIR/service" "$INSTALL_DIR/service"
 if [[ $NO_TRAY -eq 0 && -d "$SOURCE_DIR/tray" ]]; then
   rm -rf "$INSTALL_DIR/tray"; cp -r "$SOURCE_DIR/tray" "$INSTALL_DIR/tray"
-  cp "$REPO_ROOT/src/WallNut.App/Assets/wallnut.png" "$INSTALL_DIR/tray/wallnut.png"
+  cp "$(pick "$HERE/wallnut.png" "$REPO_ROOT/src/WallNut.App/Assets/wallnut.png")" "$INSTALL_DIR/tray/wallnut.png"
+  chmod 755 "$INSTALL_DIR/tray/WALLNut"
 fi
-cp "$REPO_ROOT/packaging/config.example.json" "$INSTALL_DIR/config.example.json"
+chmod 755 "$INSTALL_DIR/service/WallNut.Service"
+cp "$EXAMPLE_CONFIG" "$INSTALL_DIR/config.example.json"
 cp "$HERE/uninstall.sh" "$INSTALL_DIR/uninstall.sh"; chmod 755 "$INSTALL_DIR/uninstall.sh"
 
 step "Settings: $CONFIG_FILE"
@@ -75,8 +81,17 @@ elif [[ -n "$NAS_HOST" ]]; then
 EOF
   echo "    Created, watching $UPS_NAME@$NAS_HOST ($ROLE). Shutdown is in TEST MODE."
 else
-  cp "$REPO_ROOT/packaging/config.example.json" "$CONFIG_FILE"
-  echo "    Created from the example. Edit the Host line, then: sudo systemctl restart wallnut"
+  cat > "$CONFIG_FILE" <<'EOF'
+{
+  // WALLNut settings. Add your UPS in the WALLNut app (Settings > UPS connections).
+  // Every option is described in config.example.json in the program folder.
+  "WallNut": {
+    "Endpoints": {},
+    "Shutdown": { "DryRun": true }
+  }
+}
+EOF
+  echo "    Created. Add your UPS in the WALLNut app: Settings > UPS connections."
 fi
 chown -R root:root "$CONFIG_DIR"; chmod 700 "$CONFIG_DIR"; chmod 600 "$CONFIG_FILE"  # may hold passwords
 

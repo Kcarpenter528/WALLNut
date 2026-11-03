@@ -226,7 +226,7 @@ Step 'Done'
 Note "Program:   $InstallDir"
 Note "Settings:  $ConfigFile"
 Note "Logs:      Event Viewer > Windows Logs > Application (source: $ServiceName)"
-Note "Uninstall: & '$InstallDir\uninstall.ps1'"
+if ($InPlace) { Note 'Uninstall: Settings > Apps > WALLNut' } else { Note "Uninstall: & '$InstallDir\uninstall.ps1'" }
 $cfg = Get-Content $ConfigFile -Raw
 if ($cfg -match '"DryRun"\s*:\s*true') {
     Write-Host "`n    Shutdown is in TEST MODE: WALLNut logs 'would shut down' but won't do it." -ForegroundColor Yellow

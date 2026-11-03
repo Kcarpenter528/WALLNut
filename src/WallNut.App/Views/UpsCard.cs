@@ -26,6 +26,12 @@ public sealed class UpsCard : Border
     private readonly Polyline _loadLine = new() { StrokeThickness = 1.6, Stroke = new SolidColorBrush(Color.Parse("#F5A524")) };
     private readonly Polyline _chargeLine = new() { StrokeThickness = 1.6, Stroke = new SolidColorBrush(Color.Parse("#30A46C")) };
     private readonly TextBlock _updated = new() { FontSize = 11, Opacity = 0.55 };
+    // Why it isn't connected: wrapped inside the card, never across it (full text on hover).
+    private readonly TextBlock _problem = new()
+    {
+        FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis,
+        Margin = new Thickness(0, 0, 0, 8), IsVisible = false,
+    };
     private const double SparkWidth = 300, SparkHeight = 38;
 
     public string Id { get; }
@@ -80,7 +86,7 @@ public sealed class UpsCard : Border
         Grid.SetColumn(_updated, 1);
         footer.Children.Add(_updated);
 
-        Child = new StackPanel { Children = { header, body, spark, footer } };
+        Child = new StackPanel { Children = { header, body, _problem, spark, footer } };
         PointerPressed += (_, e) => { if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) Open?.Invoke(Id); };
     }
 
@@ -98,12 +104,41 @@ public sealed class UpsCard : Border
         _load.Text = u.Connected ? UpsLook.Percent(u.LoadPercent) : "-";
         _loadBar.Value = u.Connected ? Math.Clamp(u.LoadPercent ?? 0, 0, 100) : 0;
         _loadBar.Foreground = u.LoadPercent > 80 ? UpsLook.Critical : u.LoadPercent > 60 ? UpsLook.Warning : UpsLook.Accent;
-        _input.Text = u.Connected
-            ? (u.OnBattery ? "No mains power" : u.InputVoltage is { } v ? $"{v.ToString("0", CultureInfo.CurrentCulture)} V" : "On mains")
-            : (u.LastError ?? "-");
+        _input.Text = !u.Connected ? "-"
+            : u.OnBattery ? "No mains power"
+            : u.InputVoltage is { } v ? $"{v.ToString("0", CultureInfo.CurrentCulture)} V" : "On mains";
+        ShowProblem(!u.Connected ? Capitalize(u.LastError ?? "Not connected.") : u.Stale ? "The NUT server has lost contact with this UPS." : null);
         _updated.Text = u.Connected ? "updated " + UpsLook.Ago(u.LastUpdate) : "last seen " + UpsLook.Ago(u.LastUpdate);
         Opacity = u.Connected ? 1 : 0.8;
     }
+
+    /// <summary>
+    /// The WALLNut service can't be reached, so this UPS's state is unknown. Never keep showing the
+    /// last good state as if it were current.
+    /// </summary>
+    public void MarkUnknown()
+    {
+        _pillText.Text = "Unknown";
+        _pill.Background = UpsLook.Neutral;
+        _ring.Set(null);
+        _runtime.Text = "-";
+        _load.Text = "-";
+        _loadBar.Value = 0;
+        _input.Text = "-";
+        ShowProblem("The WALLNut service isn't reachable, so this UPS's current state is unknown.");
+        _updated.Text = "last seen " + UpsLook.Ago(Summary?.LastUpdate);
+        Opacity = 0.7;
+    }
+
+    private void ShowProblem(string? text)
+    {
+        _problem.IsVisible = text is not null;
+        _problem.Text = text;
+        _problem.Foreground = UpsLook.Warning;
+        ToolTip.SetTip(_problem, text);
+    }
+
+    private static string Capitalize(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 
     /// <summary>Draws the last hour of battery charge and load (both 0-100%).</summary>
     public void SetSparkline(HistoryResult? history)
@@ -121,7 +156,12 @@ public sealed class UpsCard : Border
             SparkHeight - 2 - Math.Clamp(p.Avg, 0, 100) / 100 * (SparkHeight - 4))).ToList();
     }
 
-    private static TextBlock Value() => new() { FontSize = 15, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+    // Capped width: a long value trims with "..." instead of pushing past the card's edge.
+    private static TextBlock Value() => new()
+    {
+        FontSize = 15, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis,
+        MaxWidth = 130, TextAlignment = TextAlignment.Right,
+    };
 
     private static Control Labeled(string label, TextBlock value) => new Grid
     {

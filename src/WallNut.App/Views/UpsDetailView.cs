@@ -100,7 +100,15 @@ public sealed class UpsDetailView : UserControl, IPage
         {
             _status.Text = "This UPS is no longer configured.";
         }
-        catch (Exception e) { _status.Text = "Can't reach the WALLNut service: " + e.Message; }
+        catch (Exception e)
+        {
+            // Don't keep showing the last good state as if it were current.
+            _pillText.Text = "Unknown";
+            _pill.Background = UpsLook.Neutral;
+            _battery.Set(null);
+            _load.Set(null, "load");
+            _status.Text = "Can't reach the WALLNut service, so this UPS's state is unknown. (" + e.Message + ")";
+        }
     }
 
     private void Render(UpsDetail d, bool rebuildTable)

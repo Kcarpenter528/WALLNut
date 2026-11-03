@@ -23,6 +23,7 @@ public sealed class OverviewView : UserControl, IPage
     };
     private readonly DispatcherTimer _sparkTimer = new() { Interval = TimeSpan.FromSeconds(60) };
     private readonly DispatcherTimer _clock = new() { Interval = TimeSpan.FromSeconds(5) };
+    private bool _serviceDown;
 
     public event Action<string>? OpenUps;
 
@@ -43,7 +44,13 @@ public sealed class OverviewView : UserControl, IPage
             },
         };
         _sparkTimer.Tick += (_, _) => _ = LoadSparklinesAsync();
-        _clock.Tick += (_, _) => { foreach (var c in _cards.Values) if (c.Summary is { } s) c.Update(s); };
+        // Keeps "updated 5 s ago" ticking; must not bring back a stale state while the service is down.
+        _clock.Tick += (_, _) =>
+        {
+            foreach (var c in _cards.Values)
+                if (_serviceDown) c.MarkUnknown();
+                else if (c.Summary is { } s) c.Update(s);
+        };
     }
 
     public string Title => "Overview";
@@ -70,7 +77,13 @@ public sealed class OverviewView : UserControl, IPage
     private void Show(ServiceInfo? info)
     {
         ShowBanner(info);
-        if (info is null) return;
+        _serviceDown = info is null;
+        if (info is null)
+        {
+            // Without the service we don't know anything current about any UPS.
+            foreach (var card in _cards.Values) card.MarkUnknown();
+            return;
+        }
 
         foreach (var u in info.Ups)
         {

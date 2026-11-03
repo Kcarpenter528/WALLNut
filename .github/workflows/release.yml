@@ -77,10 +77,17 @@ jobs:
         run: |
           $setup = Get-ChildItem dist -Filter '*-setup.exe' | Select-Object -First 1
           # Wait for setup itself only: Start-Process -Wait would also wait for the tray app it starts.
-          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/LOG=setup.log' -PassThru
-          if (-not $p.WaitForExit(600000)) { throw 'Setup took more than 10 minutes.' }
-          Get-Content "$env:ProgramFiles\WALLNut\install.log" -ErrorAction SilentlyContinue
-          if ($p.ExitCode) { Get-Content setup.log -Tail 40; throw "Setup failed ($($p.ExitCode))." }
+          $log = Join-Path $PWD 'setup.log'
+          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=`"$log`"" -PassThru
+          $finished = $p.WaitForExit(300000)
+          function Show-Logs {
+            Write-Host '---- setup.log'; Get-Content $log -Tail 60 -ErrorAction SilentlyContinue
+            Write-Host '---- install.log'; Get-Content "$env:ProgramFiles\WALLNut\install.log" -ErrorAction SilentlyContinue
+            Write-Host '---- processes'; Get-Process | Where-Object { $_.Name -match 'WALLNut|powershell|unins|setup' } | Format-Table Id, Name, StartTime | Out-String | Write-Host
+          }
+          if (-not $finished) { Show-Logs; throw 'Setup took more than 5 minutes.' }
+          Show-Logs
+          if ($p.ExitCode) { throw "Setup failed ($($p.ExitCode))." }
           (Get-Service WALLNut).WaitForStatus('Running', '00:00:30')
           & "$env:ProgramFiles\WALLNut\Service\WallNut.Service.exe" --check
           if ($LASTEXITCODE) { throw "--check failed ($LASTEXITCODE)" }

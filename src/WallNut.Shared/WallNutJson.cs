@@ -18,6 +18,13 @@ namespace WallNut.Shared;
 [JsonSerializable(typeof(List<History.MetricAvailability>))]
 [JsonSerializable(typeof(List<History.HistoryEndpoint>))]
 [JsonSerializable(typeof(History.OutageSummary))]
+[JsonSerializable(typeof(Settings.EndpointConfig))]
+[JsonSerializable(typeof(Settings.ShutdownSettings))]
+[JsonSerializable(typeof(Settings.SettingsView))]
+[JsonSerializable(typeof(Settings.EndpointTestResult))]
+[JsonSerializable(typeof(Settings.CallerInfo))]
+[JsonSerializable(typeof(Settings.SettingsProblem))]
+[JsonSerializable(typeof(Settings.UpsDetail))]
 public partial class WallNutJsonContext : JsonSerializerContext;
 
 public static class WallNutJson

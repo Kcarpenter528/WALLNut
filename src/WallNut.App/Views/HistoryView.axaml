@@ -1,12 +1,8 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="WallNut.App.Views.HistoryWindow"
-        Title="WALLNut - History"
-        Icon="/Assets/wallnut.ico"
-        Width="1180" Height="900" MinWidth="720" MinHeight="520"
-        WindowStartupLocation="CenterScreen">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="WallNut.App.Views.HistoryView">
 
-    <Window.Styles>
+    <UserControl.Styles>
         <Style Selector="Border.card">
             <Setter Property="Padding" Value="14,10" />
         </Style>
@@ -27,15 +23,15 @@
             <Setter Property="MinWidth" Value="48" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
-    </Window.Styles>
+    </UserControl.Styles>
 
     <DockPanel>
         <!-- Toolbar -->
-        <Border DockPanel.Dock="Top" Padding="20,14,20,10">
+        <Border DockPanel.Dock="Top" Padding="24,20,24,10">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Image Source="/Assets/wallnut.png" Width="34" Height="34" />
-                    <TextBlock Text="History" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    
+                    <TextBlock Text="History" FontSize="24" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <ComboBox Name="UpsBox" MinWidth="240" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -49,7 +45,7 @@
         <!-- Status line -->
         <TextBlock DockPanel.Dock="Bottom" Name="StatusText" Margin="20,6,20,10" FontSize="12" Opacity="0.7" />
 
-        <ScrollViewer Padding="20,0,20,16">
+        <ScrollViewer Padding="24,0,24,16">
             <StackPanel>
                 <!-- Summary cards -->
                 <UniformGrid Columns="5" Margin="0,0,0,12">
@@ -91,4 +87,4 @@
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
-</Window>
+</UserControl>

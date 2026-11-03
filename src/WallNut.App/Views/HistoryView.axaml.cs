@@ -14,8 +14,8 @@ using WallNut.Shared.History;
 
 namespace WallNut.App.Views;
 
-/// <summary>History and charts for one UPS over a chosen time range.</summary>
-public partial class HistoryWindow : Window
+/// <summary>History and charts for one UPS over a chosen time range (a page in the main window).</summary>
+public partial class HistoryView : UserControl, IPage
 {
     private static readonly (string Label, TimeSpan Span)[] Ranges =
     [
@@ -32,9 +32,9 @@ public partial class HistoryWindow : Window
     private CancellationTokenSource? _loading;
     private bool _suppressSelection;
 
-    public HistoryWindow() : this(((App)Application.Current!).Connection.Client) { }
+    public HistoryView() : this(((App)Application.Current!).Connection.Client) { }
 
-    public HistoryWindow(WallNutServiceClient client)
+    public HistoryView(WallNutServiceClient client)
     {
         _client = client;
         InitializeComponent();
@@ -52,9 +52,7 @@ public partial class HistoryWindow : Window
         RefreshButton.Click += (_, _) => _ = LoadAsync();
         ExportButton.Click += Export;
         _autoRefresh.Tick += (_, _) => _ = LoadAsync(quiet: true);
-        ActualThemeVariantChanged += (_, _) => Redraw();
-        Opened += async (_, _) => { await LoadUpsListAsync(); _autoRefresh.Start(); };
-        Closed += (_, _) => { _autoRefresh.Stop(); _loading?.Cancel(); };
+        Application.Current!.ActualThemeVariantChanged += (_, _) => Redraw();
     }
 
     private sealed record UpsChoice(string Id, string Name)
@@ -63,6 +61,26 @@ public partial class HistoryWindow : Window
     }
 
     private string? SelectedUps => (UpsBox.SelectedItem as UpsChoice)?.Id;
+    private bool _listLoaded;
+
+    public string Title => "History";
+
+    public void OnShown()
+    {
+        _autoRefresh.Start();
+        if (!_listLoaded) { _listLoaded = true; _ = LoadUpsListAsync(); }
+        else _ = LoadAsync(quiet: true);
+    }
+
+    public void OnHidden() { _autoRefresh.Stop(); _loading?.Cancel(); }
+
+    /// <summary>Shows a particular UPS (e.g. from its detail page).</summary>
+    public void SelectUps(string id)
+    {
+        InitialUps = id;
+        if (UpsBox.ItemsSource is IEnumerable<UpsChoice> choices && choices.FirstOrDefault(c => c.Id.Equals(id, StringComparison.OrdinalIgnoreCase)) is { } match)
+            UpsBox.SelectedItem = match;
+    }
 
     /// <summary>Pre-selects a UPS (e.g. from the tray menu).</summary>
     public string? InitialUps { get; set; }
@@ -136,7 +154,7 @@ public partial class HistoryWindow : Window
 
         var kinds = HistoryCharts.ChartsWithData(_result);
         this.FindControl<TextBlock>("EmptyText")!.IsVisible = kinds.Count == 0;
-        var theme = new ChartTheme(ActualThemeVariant == ThemeVariant.Dark);
+        var theme = new ChartTheme(Application.Current!.ActualThemeVariant == ThemeVariant.Dark);
         var outages = _outages?.Outages ?? [];
 
         foreach (var kind in kinds)
@@ -257,7 +275,8 @@ public partial class HistoryWindow : Window
         if (SelectedUps is not { } ups) return;
         var to = DateTimeOffset.UtcNow;
         var from = to - _range;
-        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
+        var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Export history as CSV",
             SuggestedFileName = $"wallnut-{ups}-{DateTime.Now:yyyyMMdd-HHmm}.csv",

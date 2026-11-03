@@ -11,11 +11,17 @@
                     <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="CardStrokeBrush" Color="#E3E3E3" />
                     <SolidColorBrush x:Key="WindowBrush" Color="#F4F4F5" />
+                    <SolidColorBrush x:Key="SidebarBrush" Color="#EBEBED" />
+                    <SolidColorBrush x:Key="NavHoverBrush" Color="#DEDEE2" />
+                    <SolidColorBrush x:Key="NavSelectedBrush" Color="#D4D9F5" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="CardBrush" Color="#202020" />
                     <SolidColorBrush x:Key="CardStrokeBrush" Color="#333336" />
                     <SolidColorBrush x:Key="WindowBrush" Color="#161618" />
+                    <SolidColorBrush x:Key="SidebarBrush" Color="#1C1C1F" />
+                    <SolidColorBrush x:Key="NavHoverBrush" Color="#2A2A2E" />
+                    <SolidColorBrush x:Key="NavSelectedBrush" Color="#2C3352" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
@@ -23,7 +29,7 @@
     <Application.Styles>
         <FluentTheme />
         <!-- Cards used across WALLNut's windows. -->
-        <Style Selector="Border.card">
+        <Style Selector=":is(Border).card">
             <Setter Property="Background" Value="{DynamicResource CardBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeBrush}" />
             <Setter Property="BorderThickness" Value="1" />
@@ -31,6 +37,28 @@
         </Style>
         <Style Selector="Window">
             <Setter Property="Background" Value="{DynamicResource WindowBrush}" />
+        </Style>
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="Padding" Value="12,4" />
+        </Style>
+        <!-- Sidebar navigation buttons. -->
+        <Style Selector="Button.nav">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NavHoverBrush}" />
+        </Style>
+        <Style Selector="Button.nav.selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+        </Style>
+        <Style Selector="Button.nav.selected TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
     </Application.Styles>
 </Application>

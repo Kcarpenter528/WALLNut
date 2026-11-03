@@ -70,6 +70,25 @@ whatever is in `appsettings.json`:
 dotnet run --project src/WallNut.Service
 ```
 
+## Desktop app
+
+Click the tray icon (or **Open WALLNut**) for the main window:
+
+- **Overview** - the wall: a live card per UPS with status, battery gauge, runtime, load, input
+  voltage and the last hour at a glance, plus the overall state and shutdown mode.
+- **UPS details** - click a card for big gauges, identity (model, serial, firmware) and every
+  variable the UPS reports, searchable and refreshed every 2 seconds.
+- **History** - charts, outages and CSV export (see below).
+- **Events** - the last 30 days of events, filterable, updating live.
+- **Settings** - add, edit, test and remove UPS connections (IP address or DNS name), shutdown rules
+  and test mode, and your own notification choices.
+
+Anyone logged in can look at settings; changing them needs an administrator. **Unlock with
+administrator rights** reopens Settings elevated (Windows asks for approval). Changes are written to
+the machine settings file and the service applies them immediately, without a restart.
+
+Shortcuts: `WALLNut --open`, `--page=history|events|settings|shutdown`, `--ups=<id>`.
+
 ## Desktop notifications (tray app)
 
 Background services can't show desktop notifications on Windows, macOS or Linux, so each

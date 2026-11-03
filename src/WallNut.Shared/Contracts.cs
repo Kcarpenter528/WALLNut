@@ -20,7 +20,8 @@ public sealed record UpsSummary(
     string? Serial,
     DateTimeOffset? LastUpdate,
     DateTimeOffset? OnBatterySince,
-    string? LastError);
+    string? LastError,
+    double? InputVoltage = null);
 
 /// <summary>The service and its shutdown setup.</summary>
 public sealed record ServiceInfo(

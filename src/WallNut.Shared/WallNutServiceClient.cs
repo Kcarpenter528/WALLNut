@@ -32,7 +32,10 @@ public sealed class WallNutServiceClient : IDisposable
                     }
                     catch { socket.Dispose(); throw; }
                 }
-                var pipe = new NamedPipeClientStream(".", Endpoint, PipeDirection.InOut, PipeOptions.Asynchronous);
+                // "Identification" lets the service see who we are (to allow settings changes only from
+                // administrators) without letting it act as us.
+                var pipe = new NamedPipeClientStream(".", Endpoint, PipeDirection.InOut, PipeOptions.Asynchronous,
+                    System.Security.Principal.TokenImpersonationLevel.Identification);
                 try
                 {
                     await pipe.ConnectAsync(TimeSpan.FromSeconds(3), ct);
@@ -55,6 +58,54 @@ public sealed class WallNutServiceClient : IDisposable
 
     public async Task<IReadOnlyList<ServiceEvent>> GetRecentEventsAsync(CancellationToken ct = default) =>
         await _http.GetFromJsonAsync("api/events/recent", WallNutJsonContext.Default.ListServiceEvent, ct) ?? [];
+
+    // ---- Live details and settings --------------------------------------------------------
+
+    public async Task<Settings.UpsDetail> GetUpsDetailAsync(string id, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync($"api/ups/{Uri.EscapeDataString(id)}", WallNutJsonContext.Default.UpsDetail, ct)
+        ?? throw new InvalidDataException("Empty reply.");
+
+    public async Task<Settings.CallerInfo> GetCallerAsync(CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync("api/me", WallNutJsonContext.Default.CallerInfo, ct)
+        ?? throw new InvalidDataException("Empty reply.");
+
+    public async Task<Settings.SettingsView> GetSettingsAsync(CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync("api/config", WallNutJsonContext.Default.SettingsView, ct)
+        ?? throw new InvalidDataException("Empty reply.");
+
+    /// <summary>Adds or replaces a UPS connection. Throws <see cref="SettingsException"/> with the reasons if refused.</summary>
+    public Task SaveEndpointAsync(Settings.EndpointConfig endpoint, CancellationToken ct = default) =>
+        SendSettingsAsync(HttpMethod.Put, $"api/config/endpoints/{Uri.EscapeDataString(endpoint.Id)}",
+            JsonContent.Create(endpoint, WallNutJsonContext.Default.EndpointConfig), ct);
+
+    public Task DeleteEndpointAsync(string id, CancellationToken ct = default) =>
+        SendSettingsAsync(HttpMethod.Delete, $"api/config/endpoints/{Uri.EscapeDataString(id)}", null, ct);
+
+    public Task SaveShutdownAsync(Settings.ShutdownSettings shutdown, CancellationToken ct = default) =>
+        SendSettingsAsync(HttpMethod.Put, "api/config/shutdown", JsonContent.Create(shutdown, WallNutJsonContext.Default.ShutdownSettings), ct);
+
+    /// <summary>Tries a connection without saving it.</summary>
+    public async Task<Settings.EndpointTestResult> TestEndpointAsync(Settings.EndpointConfig endpoint, CancellationToken ct = default)
+    {
+        using var reply = await _http.PostAsync("api/config/test-endpoint",
+            JsonContent.Create(endpoint, WallNutJsonContext.Default.EndpointConfig), ct);
+        reply.EnsureSuccessStatusCode();
+        return await reply.Content.ReadFromJsonAsync(WallNutJsonContext.Default.EndpointTestResult, ct)
+               ?? throw new InvalidDataException("Empty reply.");
+    }
+
+    private async Task SendSettingsAsync(HttpMethod method, string url, HttpContent? content, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(method, url) { Content = content };
+        using var reply = await _http.SendAsync(request, ct);
+        if (reply.IsSuccessStatusCode) return;
+        if (reply.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            throw new SettingsException(["Only an administrator can change WALLNut's settings."]);
+        var problem = reply.Content.Headers.ContentType?.MediaType == "application/json"
+            ? await reply.Content.ReadFromJsonAsync(WallNutJsonContext.Default.SettingsProblem, ct)
+            : null;
+        throw new SettingsException(problem?.Problems ?? [$"The service refused the change ({(int)reply.StatusCode})."]);
+    }
 
     // ---- History ---------------------------------------------------------------------------
 

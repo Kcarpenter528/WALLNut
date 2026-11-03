@@ -13,7 +13,7 @@ namespace WallNut.Service.Shutdown;
 /// rehearsal is reported.
 /// </summary>
 public sealed class ShutdownCoordinator(
-    IOptions<WallNutOptions> options,
+    IOptionsMonitor<WallNutOptions> options,
     UpsStateStore store,
     IEnumerable<IUpsEventSink> sinks,
     IShutdownExecutor executor,
@@ -31,7 +31,7 @@ public sealed class ShutdownCoordinator(
     /// <summary>True once a (real or rehearsed) shutdown has been started and not re-armed.</summary>
     public bool Initiated => _initiated;
 
-    private ShutdownOptions Options => options.Value.Shutdown;
+    private ShutdownOptions Options => options.CurrentValue.Shutdown;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -100,7 +100,7 @@ public sealed class ShutdownCoordinator(
     private void DescribeSetup()
     {
         var o = Options;
-        var powering = options.Value.Endpoints
+        var powering = options.CurrentValue.Endpoints
             .Where(e => e.Value.Enabled && e.Value.Role == UpsRole.PowersThisMachine)
             .Select(e => $"{e.Key} (power value {e.Value.PowerValue})")
             .ToList();

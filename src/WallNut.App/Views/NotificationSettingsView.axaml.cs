@@ -4,15 +4,16 @@ using WallNut.Shared;
 
 namespace WallNut.App.Views;
 
-public partial class SettingsWindow : Window
+/// <summary>This user's desktop notification choices (a tab in Settings).</summary>
+public partial class NotificationSettingsView : UserControl
 {
     private readonly App _app;
     private readonly SettingsViewModel _vm;
 
     // For the XAML designer.
-    public SettingsWindow() : this((App)Avalonia.Application.Current!) { }
+    public NotificationSettingsView() : this((App)Avalonia.Application.Current!) { }
 
-    public SettingsWindow(App app)
+    public NotificationSettingsView(App app)
     {
         _app = app;
         _vm = new SettingsViewModel(app.Preferences);
@@ -20,7 +21,6 @@ public partial class SettingsWindow : Window
         InitializeComponent();
 
         this.FindControl<Button>("SaveButton")!.Click += Save;
-        this.FindControl<Button>("CloseButton")!.Click += (_, _) => Close();
         this.FindControl<Button>("TestButton")!.Click += Test;
     }
 

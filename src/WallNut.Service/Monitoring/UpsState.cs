@@ -49,4 +49,7 @@ public sealed class UpsStateStore
     public UpsState? Get(string endpointId) => _states.TryGetValue(endpointId, out var s) ? s : null;
 
     public void Set(UpsState state) => _states[state.EndpointId] = state;
+
+    /// <summary>Forgets a UPS that's no longer configured.</summary>
+    public void Remove(string endpointId) => _states.TryRemove(endpointId, out _);
 }

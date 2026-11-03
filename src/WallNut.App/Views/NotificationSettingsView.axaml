@@ -1,14 +1,11 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:WallNut.App.Views"
-        x:Class="WallNut.App.Views.SettingsWindow"
+        x:Class="WallNut.App.Views.NotificationSettingsView"
         x:DataType="vm:SettingsViewModel"
-        Title="WALLNut - Notification settings"
-        Icon="/Assets/wallnut.ico"
-        Width="620" Height="780" MinWidth="460" MinHeight="420"
-        WindowStartupLocation="CenterScreen">
+        >
 
-    <Window.Styles>
+    <UserControl.Styles>
         <Style Selector="Border.card">
             <Setter Property="Padding" Value="16,12" />
             <Setter Property="Margin" Value="0,0,0,10" />
@@ -23,7 +20,7 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Margin" Value="0,14,0,8" />
         </Style>
-    </Window.Styles>
+    </UserControl.Styles>
 
     <DockPanel>
         <!-- Footer -->
@@ -34,7 +31,6 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                     <Button Name="TestButton" Content="Send test notification" />
                     <Button Name="SaveButton" Content="Save" Classes="accent" />
-                    <Button Name="CloseButton" Content="Close" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -42,7 +38,7 @@
         <ScrollViewer Padding="20,16">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,6">
-                    <Image Source="/Assets/wallnut.png" Width="40" Height="40" />
+                    
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Desktop notifications" FontSize="20" FontWeight="SemiBold" />
                         <TextBlock Text="Choose what WALLNut tells you about. These settings are yours alone." Classes="hint" />
@@ -118,4 +114,4 @@
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
-</Window>
+</UserControl>

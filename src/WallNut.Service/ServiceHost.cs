@@ -47,14 +47,15 @@ public static class ServiceHost
 
         builder.Services.AddHostedService<MonitorService>();
 
-        // Test mode unless WallNut:Shutdown:DryRun is explicitly false.
-        var dryRun = builder.Configuration.GetValue("WallNut:Shutdown:DryRun", true);
-        if (dryRun) builder.Services.AddSingleton<IShutdownExecutor, DryRunShutdownExecutor>();
-        else builder.Services.AddSingleton<IShutdownExecutor, SystemShutdownExecutor>();
+        // Test mode or real, decided at the moment of shutdown from the current settings.
+        builder.Services.AddSingleton<DryRunShutdownExecutor>();
+        builder.Services.AddSingleton<SystemShutdownExecutor>();
+        builder.Services.AddSingleton<IShutdownExecutor, SwitchingShutdownExecutor>();
         builder.Services.AddSingleton<ShutdownCoordinator>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<ShutdownCoordinator>());
 
         // Local-only API for the tray and desktop apps (named pipe / Unix socket, no network port).
+        builder.Services.AddSingleton<ICallerIdentity, ConnectionCallerIdentity>();
         var endpoint = builder.Configuration["WallNut:Api:Endpoint"] is { Length: > 0 } configured
             ? ServiceEndpoint.Resolve(configured)
             : ServiceEndpoint.Default;
@@ -107,7 +108,8 @@ public static class ServiceHost
         for (var i = 0; i < sources.Count; i++)
             if (sources[i] is JsonConfigurationSource j && j.Path?.StartsWith("appsettings", StringComparison.OrdinalIgnoreCase) == true) lastJson = i;
 
-        var source = new JsonConfigurationSource { Path = full, Optional = true, ReloadOnChange = false };
+        // Reloaded on change: edits from the app (or by hand) apply without restarting the service.
+        var source = new JsonConfigurationSource { Path = full, Optional = true, ReloadOnChange = true, ReloadDelay = 200 };
         source.ResolveFileProvider();
         try
         {

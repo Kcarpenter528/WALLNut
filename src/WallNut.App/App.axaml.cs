@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -13,8 +15,9 @@ using WallNut.Shared.Notifications;
 namespace WallNut.App;
 
 /// <summary>
-/// The tray app: an icon in the notification area whose color shows UPS health, desktop
-/// notifications for UPS events (filtered by this user's preferences), and a settings window.
+/// The WALLNut app. Normally it lives in the tray: an icon whose color shows UPS health, desktop
+/// notifications (filtered by this user's preferences), and the main window on demand. Started with
+/// --admin-settings (by "Unlock", with administrator rights) it shows only Settings and exits when closed.
 /// </summary>
 public partial class App : Application
 {
@@ -22,11 +25,11 @@ public partial class App : Application
 
     private readonly ServiceConnection _connection = new();
     private NotificationPreferences _prefs = NotificationPreferences.Load();
-    private NotificationFilter _filter = null!;
+    private NotificationFilter? _filter;
     private INotifier _notifier = null!;
-    private TrayIcon _tray = null!;
-    private NativeMenuItem _statusItem = null!;
-    private SettingsWindow? _settings;
+    private TrayIcon? _tray;
+    private NativeMenuItem? _statusItem;
+    private MainWindow? _main;
     private readonly Dictionary<TrayState, WindowIcon> _icons = [];
     private DateTimeOffset? _unreachableSince;
     private bool _toldServiceMissing;
@@ -35,77 +38,154 @@ public partial class App : Application
     public NotificationPreferences Preferences => _prefs;
     public ServiceConnection Connection => _connection;
 
+    /// <summary>True in the elevated settings-only instance.</summary>
+    public bool AdminMode { get; private set; }
+
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // No main window: the app lives in the tray until "Quit".
-            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            desktop.Exit += (_, _) => { _connection.Dispose(); _filter.Dispose(); };
-
-            foreach (var state in Enum.GetValues<TrayState>())
-                _icons[state] = new WindowIcon(AssetLoader.Open(new Uri($"avares://WALLNut/Assets/tray-{state.ToString().ToLowerInvariant()}.png")));
-
-            _notifier = Notifier.ForThisPlatform();
-            _filter = new NotificationFilter(() => _prefs);
-            _filter.Show += ShowNotification;
-
-            BuildTray(desktop);
-
-            _connection.EventReceived += e => _filter.Handle(e);
-            _connection.InfoChanged += info => Dispatcher.UIThread.Post(() => OnInfo(info));
+            var args = desktop.Args ?? [];
+            AdminMode = args.Contains("--admin-settings");
+            desktop.Exit += (_, _) => { _connection.Dispose(); _filter?.Dispose(); };
             _connection.Start();
 
-            if (args(desktop).Contains("--settings")) OpenSettings();
-            if (args(desktop).Contains("--history"))
-                OpenHistory(args(desktop).FirstOrDefault(a => a.StartsWith("--range=", StringComparison.Ordinal))?["--range=".Length..]);
+            if (AdminMode)
+            {
+                // Settings only; closing the window ends this elevated copy.
+                desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
+                desktop.MainWindow = _main = new MainWindow(this, adminMode: true);
+            }
+            else
+            {
+                // Lives in the tray until "Quit"; closing the window just hides the app.
+                desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                foreach (var state in Enum.GetValues<TrayState>())
+                    _icons[state] = new WindowIcon(AssetLoader.Open(new Uri($"avares://WALLNut/Assets/tray-{state.ToString().ToLowerInvariant()}.png")));
+
+                _notifier = Notifier.ForThisPlatform();
+                _filter = new NotificationFilter(() => _prefs);
+                _filter.Show += ShowNotification;
+                BuildTray(desktop);
+
+                _connection.EventReceived += e => _filter.Handle(e);
+                _connection.InfoChanged += info => Dispatcher.UIThread.Post(() => OnInfo(info));
+
+                if (args.Contains("--settings")) OpenMain(w => w.ShowSettings("Notifications"));
+                else if (args.Contains("--history"))
+                {
+                    var range = args.FirstOrDefault(a => a.StartsWith("--range=", StringComparison.Ordinal))?["--range=".Length..];
+                    OpenMain(w => { w.History.InitialRange = range; w.ShowHistory(); });
+                }
+                else if (args.FirstOrDefault(a => a.StartsWith("--ups=", StringComparison.Ordinal)) is { } ups)
+                    OpenMain(w => w.ShowUps(ups["--ups=".Length..]));
+                else if (args.FirstOrDefault(a => a.StartsWith("--page=", StringComparison.Ordinal)) is { } page)
+                    OpenMain(w =>
+                    {
+                        switch (page["--page=".Length..].ToLowerInvariant())
+                        {
+                            case "events": w.ShowEvents(); break;
+                            case "history": w.ShowHistory(); break;
+                            case "settings": w.ShowSettings(); break;
+                            case "shutdown": w.ShowSettings("Shutdown"); break;
+                            default: w.ShowOverview(); break;
+                        }
+                    });
+                else if (args.Contains("--open")) OpenMain(w => w.ShowOverview());
+            }
         }
         base.OnFrameworkInitializationCompleted();
-
-        static string[] args(IClassicDesktopStyleApplicationLifetime d) => d.Args ?? [];
     }
 
     private void BuildTray(IClassicDesktopStyleApplicationLifetime desktop)
     {
         _statusItem = new NativeMenuItem("Connecting to WALLNut service...") { IsEnabled = false };
 
-        var history = new NativeMenuItem("History and charts...");
-        history.Click += (_, _) => OpenHistory();
-
-        var settings = new NativeMenuItem("Notification settings...");
-        settings.Click += (_, _) => OpenSettings();
+        NativeMenuItem Item(string text, Action action)
+        {
+            var item = new NativeMenuItem(text);
+            item.Click += (_, _) => action();
+            return item;
+        }
 
         var test = new NativeMenuItem("Send test notification");
         test.Click += async (_, _) => await SendTestAsync();
-
-        var quit = new NativeMenuItem("Quit WALLNut");
-        quit.Click += (_, _) => desktop.Shutdown();
 
         _tray = new TrayIcon
         {
             Icon = _icons[TrayState.Offline],
             ToolTipText = "WALLNut",
-            Menu = new NativeMenu { Items = { _statusItem, new NativeMenuItemSeparator(), history, settings, test, new NativeMenuItemSeparator(), quit } },
+            Menu = new NativeMenu
+            {
+                Items =
+                {
+                    _statusItem, new NativeMenuItemSeparator(),
+                    Item("Open WALLNut", () => OpenMain(w => w.ShowOverview())),
+                    Item("History and charts", () => OpenMain(w => w.ShowHistory())),
+                    Item("Settings", () => OpenMain(w => w.ShowSettings())),
+                    test,
+                    new NativeMenuItemSeparator(),
+                    Item("Quit WALLNut", () => desktop.Shutdown()),
+                },
+            },
         };
-        _tray.Clicked += (_, _) => OpenHistory();
+        _tray.Clicked += (_, _) => OpenMain(w => w.ShowOverview());
         TrayIcon.SetIcons(this, [_tray]);
+    }
+
+    /// <summary>Shows the main window (creating it if needed) and runs <paramref name="then"/> on it.</summary>
+    public void OpenMain(Action<MainWindow>? then = null)
+    {
+        if (_main is null)
+        {
+            _main = new MainWindow(this);
+            _main.Closed += (_, _) => _main = null;
+            _main.Show();
+        }
+        then?.Invoke(_main);
+        if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
+        _main.Activate();
+    }
+
+    /// <summary>
+    /// Starts a copy of WALLNut with administrator rights showing only Settings (Windows asks for
+    /// approval). Returns a message for the user.
+    /// </summary>
+    public string OpenElevatedSettings()
+    {
+        var exe = Environment.ProcessPath;
+        if (exe is null) return "Can't find the WALLNut program to restart it.";
+        if (!OperatingSystem.IsWindows())
+            return $"Run this in a terminal to change settings as an administrator:  sudo \"{exe}\" --admin-settings";
+        try
+        {
+            var psi = new ProcessStartInfo(exe) { UseShellExecute = true, Verb = "runas" };
+            psi.ArgumentList.Add("--admin-settings");
+            psi.ArgumentList.Add("--endpoint=" + _connection.Client.Endpoint);
+            Process.Start(psi);
+            return "A WALLNut settings window with administrator rights is opening. Make your changes there.";
+        }
+        catch (Win32Exception) { return "Administrator approval was cancelled."; }
     }
 
     private void OnInfo(ServiceInfo? info)
     {
         var (state, text) = TrayStatus.Describe(info);
-        _tray.Icon = _icons[state];
-        _tray.ToolTipText = "WALLNut\n" + text;
-        _statusItem.Header = text.Split('\n')[0];
-        _settings?.UpdateService(info);
+        if (_tray is not null)
+        {
+            _tray.Icon = _icons[state];
+            _tray.ToolTipText = "WALLNut\n" + text;
+        }
+        if (_statusItem is not null) _statusItem.Header = text.Split('\n')[0];
         WatchServiceAvailability(info is not null);
     }
 
     /// <summary>Tell the user (once) if the service stays unreachable: without it there are no UPS alerts.</summary>
     private void WatchServiceAvailability(bool reachable)
     {
+        if (_filter is null) return;
         var now = DateTimeOffset.UtcNow;
         if (reachable)
         {
@@ -137,7 +217,7 @@ public partial class App : Application
             ? kind.Title
             : $"{kind.Title}: {e.DisplayName}";
         try { _notifier.Show(title, e.Message, kind.Urgency, e.EndpointId); }
-        catch (Exception ex) { System.Diagnostics.Trace.TraceError($"WALLNut: notification failed: {ex}"); }
+        catch (Exception ex) { Trace.TraceError($"WALLNut: notification failed: {ex}"); }
     }
 
     public async Task<string> SendTestAsync()
@@ -150,7 +230,8 @@ public partial class App : Application
         catch
         {
             // The service isn't there; at least prove desktop notifications work.
-            ShowNotification(Local("Test", "Desktop notifications work, but the WALLNut service isn't running, so UPS alerts won't arrive."));
+            if (_notifier is not null)
+                ShowNotification(Local("Test", "Desktop notifications work, but the WALLNut service isn't running, so UPS alerts won't arrive."));
             return "The WALLNut service isn't running, so the tray app sent the test itself.";
         }
     }
@@ -159,26 +240,5 @@ public partial class App : Application
     {
         prefs.Save();
         _prefs = prefs; // swapped in one step; the filter always reads the current object
-    }
-
-    private HistoryWindow? _history;
-
-    private void OpenHistory(string? range = null)
-    {
-        if (_history is { } open) { open.Activate(); return; }
-        _history = new HistoryWindow(_connection.Client) { InitialRange = range };
-        _history.Closed += (_, _) => _history = null;
-        _history.Show();
-        _history.Activate();
-    }
-
-    private void OpenSettings()
-    {
-        if (_settings is { } open) { open.Activate(); return; }
-        _settings = new SettingsWindow(this);
-        _settings.Closed += (_, _) => _settings = null;
-        _settings.UpdateService(_connection.Info);
-        _settings.Show();
-        _settings.Activate();
     }
 }

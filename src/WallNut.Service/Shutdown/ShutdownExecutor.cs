@@ -62,6 +62,19 @@ public sealed class SystemShutdownExecutor(ILogger<SystemShutdownExecutor> log) 
     }
 }
 
+/// <summary>
+/// Picks test mode or the real thing at the moment of shutdown, from the current settings, so
+/// switching test mode off (or on) in the app takes effect without restarting the service.
+/// </summary>
+public sealed class SwitchingShutdownExecutor(
+    Microsoft.Extensions.Options.IOptionsMonitor<WallNutOptions> options,
+    DryRunShutdownExecutor dryRun,
+    SystemShutdownExecutor real) : IShutdownExecutor
+{
+    public Task ExecuteAsync(ShutdownAction action, string reason, CancellationToken ct) =>
+        (options.CurrentValue.Shutdown.DryRun ? (IShutdownExecutor)dryRun : real).ExecuteAsync(action, reason, ct);
+}
+
 /// <summary>Test mode: logs what would happen and does nothing.</summary>
 public sealed class DryRunShutdownExecutor(ILogger<DryRunShutdownExecutor> log) : IShutdownExecutor
 {

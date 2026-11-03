@@ -86,10 +86,11 @@ public static class LocalApi
     {
         var api = app.MapGroup("/api");
         api.MapHistoryApi();
+        api.MapSettingsApi();
 
-        api.MapGet("/info", (UpsStateStore store, IOptions<WallNutOptions> options, ShutdownCoordinator coordinator) =>
+        api.MapGet("/info", (UpsStateStore store, IOptionsMonitor<WallNutOptions> options, ShutdownCoordinator coordinator) =>
         {
-            var o = options.Value.Shutdown;
+            var o = options.CurrentValue.Shutdown;
             return new ServiceInfo(
                 Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0",
                 Environment.MachineName,
@@ -160,6 +161,7 @@ public static class LocalApi
             N(s.Var("battery.charge")), N(s.Var("battery.runtime")), N(s.Var("ups.load")),
             s.Var("device.mfr") ?? s.Var("ups.mfr"), s.Var("device.model") ?? s.Var("ups.model"),
             s.Var("device.serial") ?? s.Var("ups.serial"),
-            s.LastUpdate, s.OnBatterySince, s.LastError);
+            s.LastUpdate, s.OnBatterySince, s.LastError,
+            N(s.Var("input.voltage")) ?? N(s.Var("input.L1-N.voltage")));
     }
 }

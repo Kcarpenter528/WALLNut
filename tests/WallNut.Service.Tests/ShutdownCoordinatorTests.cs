@@ -28,7 +28,7 @@ public class ShutdownCoordinatorTests
     private readonly RecordingExecutor _exec = new();
 
     private ShutdownCoordinator Make(ShutdownOptions shutdown) => new(
-        Options.Create(new WallNutOptions { Shutdown = shutdown }), _store, [_sink], _exec,
+        TestOptions.Fixed(new WallNutOptions { Shutdown = shutdown }), _store, [_sink], _exec,
         NullLogger<ShutdownCoordinator>.Instance, TimeProvider.System)
     { RetryAfterFailure = TimeSpan.Zero };
 
@@ -172,7 +172,7 @@ public sealed class EndToEndShutdownTests : IAsyncLifetime
         var monitor = new UpsMonitor("nas", endpoint, new ReconnectOptions { InitialDelaySeconds = 0.1, MaxDelaySeconds = 0.3 },
             _store, [_sink], NullLogger.Instance);
         var coordinator = new ShutdownCoordinator(
-            Options.Create(new WallNutOptions { Endpoints = { ["nas"] = endpoint }, Shutdown = shutdown }),
+            TestOptions.Fixed(new WallNutOptions { Endpoints = { ["nas"] = endpoint }, Shutdown = shutdown }),
             _store, [_sink], _exec, NullLogger<ShutdownCoordinator>.Instance, TimeProvider.System)
         { CheckInterval = TimeSpan.FromMilliseconds(50) };
 

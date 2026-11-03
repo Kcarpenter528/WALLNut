@@ -17,7 +17,7 @@ public static class ActionsApi
     public static void MapActionsApi(this RouteGroupBuilder api)
     {
         api.MapPut("/config/actions/{id}", (string id, ActionConfig body, HttpContext http, ICallerIdentity callers,
-            IOptionsMonitor<WallNutOptions> options, MachineConfigStatus file) =>
+            IOptionsMonitor<WallNutOptions> options, MachineConfigStatus file, ScriptRunner scripts) =>
         {
             if (!callers.Get(http).IsAdmin) return Results.StatusCode(StatusCodes.Status403Forbidden);
             if (file.Path is null) return Problems(["This service was started without a settings file, so changes can't be saved."]);
@@ -26,6 +26,8 @@ public static class ActionsApi
 
             var action = FromConfig(body, options.CurrentValue.Actions.GetValueOrDefault(id));
             if (ActionValidation.Validate(id, action) is { Count: > 0 } problems) return Problems(problems);
+            if (action.Script is { } script && scripts.CheckSafety && ScriptSafety.Check(script.Path) is { } unsafeReason)
+                return Problems([$"The script can't be used: {unsafeReason}"]);
 
             new MachineConfigWriter(file.Path).Update(w =>
             {

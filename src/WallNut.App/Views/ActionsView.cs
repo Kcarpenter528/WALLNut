@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Avalonia.Media.Imaging;
 using QRCoder;
 using WallNut.Shared;
@@ -11,7 +12,7 @@ using WallNut.Shared.Actions;
 
 namespace WallNut.App.Views;
 
-/// <summary>Settings tab: alerts and actions the service runs (phone alerts, webhooks; scripts and email next).</summary>
+/// <summary>Settings tab: alerts and actions the service runs (phone alerts, webhooks, scripts; email next).</summary>
 public sealed class ActionsView : UserControl
 {
     private readonly App _app;
@@ -54,6 +55,13 @@ public sealed class ActionsView : UserControl
     private readonly TextBox _secret = new() { PasswordChar = '•', PlaceholderText = "optional: sign requests (X-WallNut-Signature)" };
     private readonly StackPanel _customFields = new() { Spacing = 10 };
 
+    // Script fields.
+    private readonly TextBox _scriptPath = new() { PlaceholderText = OperatingSystem.IsWindows() ? @"C:\ProgramData\WALLNut\scripts\on-battery.ps1" : "/etc/wallnut/scripts/on-battery.sh" };
+    private readonly TextBox _scriptArgs = new() { PlaceholderText = "optional, e.g. {event} \"{ups}\"", FontFamily = new FontFamily("Cascadia Mono, Consolas, Menlo, monospace") };
+    private readonly NumericUpDown _scriptTimeout = new() { Minimum = 1, Maximum = 3600, Value = 60, FormatString = "0", Width = 130 };
+    private readonly CheckBox _beforeShutdown = new() { Content = "Run before this computer shuts down, and wait for it to finish" };
+    private readonly CheckBox _inTestMode = new() { Content = "Also run it during shutdown tests (test mode)" };
+
     private ActionConfig? _editing; // null = new
     private string _type = ActionTypes.Ntfy;
 
@@ -61,7 +69,7 @@ public sealed class ActionsView : UserControl
     {
         _app = app;
         _admin = new AdminBanner(app);
-        foreach (var type in new[] { ActionTypes.Ntfy, ActionTypes.Webhook })
+        foreach (var type in new[] { ActionTypes.Ntfy, ActionTypes.Webhook, ActionTypes.Script })
         {
             var b = new Button { Content = "+ " + ActionTypes.Describe(type) };
             b.Click += (_, _) => Edit(null, type);
@@ -203,7 +211,9 @@ public sealed class ActionsView : UserControl
 
         _typePanel.Children.Clear();
         if (type == ActionTypes.Ntfy) BuildNtfy(a?.Ntfy);
+        else if (type == ActionTypes.Script) BuildScript(a?.Script);
         else BuildWebhook(a?.Webhook);
+        _test.Content = type == ActionTypes.Script ? "Run test" : "Send test";
 
         _editor.IsVisible = true;
         _editor.BringIntoView();
@@ -259,6 +269,47 @@ public sealed class ActionsView : UserControl
             w?.Headers.Count > 0 ? "Saved header values are hidden. Leave a value empty to keep it." : "For example: Authorization: Bearer <token>"));
         _typePanel.Children.Add(ConnectionsView.Field("Signing secret", _secret));
         PresetChanged();
+    }
+
+    private void BuildScript(ScriptConfig? sc)
+    {
+        _scriptPath.Text = sc?.Path ?? "";
+        _scriptArgs.Text = sc?.Arguments ?? "";
+        _scriptTimeout.Value = (decimal)(sc?.TimeoutSeconds ?? 60);
+        _beforeShutdown.IsChecked = sc?.RunBeforeShutdown ?? false;
+        _inTestMode.IsChecked = sc?.RunInTestMode ?? false;
+
+        var browse = new Button { Content = "Browse..." };
+        browse.Click += async (_, _) => await BrowseAsync();
+        var pathRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        pathRow.Children.Add(_scriptPath);
+        Grid.SetColumn(browse, 1); browse.Margin = new Thickness(8, 0, 0, 0); pathRow.Children.Add(browse);
+
+        var folder = OperatingSystem.IsWindows() ? @"C:\ProgramData\WALLNut\scripts" : OperatingSystem.IsMacOS() ? "/Library/Application Support/WALLNut/scripts" : "/etc/wallnut/scripts";
+        var kinds = OperatingSystem.IsWindows() ? ".ps1, .bat, .cmd or .exe" : ".sh, or any executable file";
+        _typePanel.Children.Add(ConnectionsView.Field("Script", pathRow,
+            $"A {kinds} file. The service runs it with its own rights (SYSTEM or root), so it must be in a folder only administrators can change, such as {folder}."));
+        _typePanel.Children.Add(ConnectionsView.Field("Arguments", _scriptArgs,
+            "Placeholders: {event} {title} {message} {ups} {ups_id} {host} {status} {charge} {runtime} {load} {machine} {time}. " +
+            "The same values are always in environment variables: WALLNUT_EVENT, WALLNUT_UPS, WALLNUT_CHARGE, WALLNUT_TEST_MODE, ..."));
+        _typePanel.Children.Add(ConnectionsView.Field("Time limit", new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _scriptTimeout,
+            new TextBlock { Text = "seconds (it's stopped after this)", VerticalAlignment = VerticalAlignment.Center } } }));
+        _typePanel.Children.Add(new StackPanel { Spacing = 4, Children =
+        {
+            _beforeShutdown,
+            new TextBlock { FontSize = 12, Opacity = 0.6, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(28, 0, 0, 0),
+                Text = "For stopping VMs, containers or databases cleanly. The shutdown waits for it, up to the time limit, then goes ahead regardless." },
+            _inTestMode,
+            new TextBlock { FontSize = 12, Opacity = 0.6, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(28, 0, 0, 0),
+                Text = "Off by default, so a rehearsal never stops real things. The \"Run test\" button always runs it." },
+        } });
+    }
+
+    private async Task BrowseAsync()
+    {
+        if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Choose a script", AllowMultiple = false });
+        if (files.Count > 0 && files[0].TryGetLocalPath() is { } path) _scriptPath.Text = path;
     }
 
     private string Preset => WebhookPresets.All[Math.Max(0, _preset.SelectedIndex)];
@@ -328,17 +379,27 @@ public sealed class ActionsView : UserControl
                     .ToDictionary(p => p[0].Trim(), p => p.Length > 1 ? p[1].Trim() : "", StringComparer.OrdinalIgnoreCase),
                 Secret = string.IsNullOrEmpty(_secret.Text) ? null : _secret.Text,
             },
+            Script = _type != ActionTypes.Script ? null : new ScriptConfig
+            {
+                Path = (_scriptPath.Text ?? "").Trim().Trim('"'),
+                Arguments = string.IsNullOrWhiteSpace(_scriptArgs.Text) ? null : _scriptArgs.Text,
+                TimeoutSeconds = (double)(_scriptTimeout.Value ?? 60),
+                RunBeforeShutdown = _beforeShutdown.IsChecked == true,
+                RunInTestMode = _inTestMode.IsChecked == true,
+            },
         };
     }
 
     private async Task TestAsync()
     {
-        _testResult.Text = "Sending...";
+        _testResult.Text = _type == ActionTypes.Script ? "Running..." : "Sending...";
         _testResult.ClearValue(TextBlock.ForegroundProperty);
         try
         {
             var r = await _app.Connection.Client.TestActionAsync(FromForm());
-            _testResult.Text = r.Ok ? r.Message + " Check that it arrived." : r.Message;
+            _testResult.Text = !r.Ok ? r.Message
+                : _type == ActionTypes.Script ? "The script " + r.Message + ". Its output is in the service log."
+                : r.Message + " Check that it arrived.";
             _testResult.Foreground = r.Ok ? UpsLook.Good : UpsLook.Critical;
         }
         catch (Exception e) { _testResult.Text = "Couldn't ask the service to test it: " + e.Message; _testResult.Foreground = UpsLook.Critical; }

@@ -40,10 +40,13 @@ public static class ServiceHost
         builder.Services.AddSingleton<IUpsEventSink, LoggingEventSink>();
         builder.Services.AddSingleton<IUpsEventSink>(sp => sp.GetRequiredService<EventHub>());
 
-        // Alerts and actions: phone alerts, webhooks (scripts and email follow).
+        // Alerts and actions: phone alerts, webhooks, scripts (email follows).
         builder.Services.AddHttpClient("actions");
         builder.Services.AddSingleton<Actions.IActionSender, Actions.NtfySender>();
         builder.Services.AddSingleton<Actions.IActionSender, Actions.WebhookSender>();
+        builder.Services.AddSingleton<Actions.ScriptRunner>();
+        builder.Services.AddSingleton<Actions.IActionSender>(sp => sp.GetRequiredService<Actions.ScriptRunner>());
+        builder.Services.AddSingleton<Actions.IBeforeShutdown>(sp => sp.GetRequiredService<Actions.ScriptRunner>());
         builder.Services.AddSingleton<Actions.ActionDispatcher>();
         builder.Services.AddSingleton<IUpsEventSink>(sp => sp.GetRequiredService<Actions.ActionDispatcher>());
         builder.Services.AddHostedService(sp => sp.GetRequiredService<Actions.ActionDispatcher>());

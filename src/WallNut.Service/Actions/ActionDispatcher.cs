@@ -164,6 +164,8 @@ public sealed class ActionDispatcher(
         public void Offer(UpsEvent e, ActionMessage m)
         {
             var kind = e.Kind.ToString();
+            // "Run before shutdown" scripts are run (and waited for) by the shutdown itself.
+            if (kind == "ShutdownInitiated" && _a.Script is { RunBeforeShutdown: true }) return;
             // The "all clear" for a problem we're watching also passes, so a held problem can be dropped.
             var watched = _events.Contains(kind) || EventHold.Pairs.Any(p => p.Value == kind && _events.Contains(p.Key));
             if (!watched) return;

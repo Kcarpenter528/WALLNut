@@ -18,7 +18,8 @@ public sealed class ShutdownCoordinator(
     IEnumerable<IUpsEventSink> sinks,
     IShutdownExecutor executor,
     ILogger<ShutdownCoordinator> log,
-    TimeProvider time) : BackgroundService
+    TimeProvider time,
+    Actions.IBeforeShutdown? beforeShutdown = null) : BackgroundService
 {
     private readonly IReadOnlyList<IUpsEventSink> _sinks = sinks.ToList();
     private bool _initiated;
@@ -78,11 +79,15 @@ public sealed class ShutdownCoordinator(
         _initiated = true;
 
         var delay = TimeSpan.FromSeconds(o.FinalDelaySeconds);
-        await PublishAsync(UpsEventKind.ShutdownInitiated,
+        var initiated = await PublishAsync(UpsEventKind.ShutdownInitiated,
             (o.DryRun ? "TEST MODE - would shut down" : $"{(o.Action == ShutdownAction.Hibernate ? "Hibernating" : "Shutting down")}")
             + $" in {delay.TotalSeconds:0}s. {decision.Summary}", ct);
 
-        if (delay > TimeSpan.Zero) await Task.Delay(delay, time, ct);
+        // Scripts marked "run before shutdown" run alongside the final delay; the shutdown waits
+        // for whichever takes longer (each script is limited by its own time limit).
+        var scripts = beforeShutdown?.RunAsync(initiated, ct) ?? Task.CompletedTask;
+        var wait = delay > TimeSpan.Zero ? Task.Delay(delay, time, ct) : Task.CompletedTask;
+        await Task.WhenAll(scripts, wait);
         try
         {
             await executor.ExecuteAsync(o.Action, decision.Summary, ct);
@@ -126,7 +131,7 @@ public sealed class ShutdownCoordinator(
             string.Join(", ", powering), string.Join("; ", rules));
     }
 
-    private async Task PublishAsync(UpsEventKind kind, string message, CancellationToken ct)
+    private async Task<UpsEvent> PublishAsync(UpsEventKind kind, string message, CancellationToken ct)
     {
         var e = new UpsEvent(UpsEvent.ThisMachine, Environment.MachineName, kind, time.GetUtcNow(), null, message);
         foreach (var sink in _sinks)
@@ -137,5 +142,6 @@ public sealed class ShutdownCoordinator(
                 log.LogError(ex, "Event sink {Sink} failed for {Kind}", sink.GetType().Name, kind);
             }
         }
+        return e;
     }
 }

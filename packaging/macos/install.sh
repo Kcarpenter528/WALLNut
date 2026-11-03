@@ -54,7 +54,8 @@ cp "$HERE/uninstall.sh" "$INSTALL_DIR/uninstall.sh"; chmod 755 "$INSTALL_DIR/uni
 xattr -dr com.apple.quarantine "$INSTALL_DIR" 2>/dev/null || true
 
 step "Settings: $CONFIG_FILE"
-mkdir -p "$CONFIG_DIR"
+mkdir -p "$CONFIG_DIR" "$CONFIG_DIR/scripts"
+chown root "$CONFIG_DIR/scripts"; chmod 755 "$CONFIG_DIR/scripts"   # scripts for actions: root-only to change
 if [[ -f "$CONFIG_FILE" ]]; then
   echo "    Keeping your existing settings."
 elif [[ -n "$NAS_HOST" ]]; then

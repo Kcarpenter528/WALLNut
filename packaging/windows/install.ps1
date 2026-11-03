@@ -101,6 +101,7 @@ $trayExe = Join-Path $trayDir 'WALLNut.exe'
 # ---- Settings ------------------------------------------------------------------------
 Step "Settings: $ConfigFile"
 New-Item -ItemType Directory -Force $ConfigDir | Out-Null
+New-Item -ItemType Directory -Force (Join-Path $ConfigDir 'scripts') | Out-Null  # scripts for actions; admin-only like the settings
 if (Test-Path $ConfigFile) {
     Note 'Keeping your existing settings.'
 } elseif ($NasHost) {
